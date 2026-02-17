@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-arad-blue: #02192c;
+  --color-arad-gold: #bf9000;
+  --color-arad-chart-bg: #081f32;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-slate-50);
+    color: var(--color-slate-900);
+  }
+}
