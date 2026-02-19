@@ -9,11 +9,10 @@ const MONTHS_PER_YEAR = 12;
 const TOTAL_MONTHS = TOTAL_YEARS * MONTHS_PER_YEAR;
 const MONTH_NAMES = ["G", "F", "M", "A", "M", "G", "L", "A", "S", "O", "N", "D"];
 
-const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = null, onUpdateProject }) => {
+const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = null, onUpdateProject, isEditor = false }) => {
     const containerRef = useRef(null);
     const [draggedProject, setDraggedProject] = useState(null);
 
-    // Parametri di calcolo
     const monthWidth = 30;
     const totalWidth = TOTAL_MONTHS * monthWidth;
 
@@ -41,9 +40,9 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
     };
 
     const handleMouseDown = (e, project, mode = 'move') => {
+        if (!isEditor) return;
         e.preventDefault();
         e.stopPropagation();
-
         setDraggedProject({
             ...project,
             mode,
@@ -58,17 +57,14 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
     const handleMouseMove = (e) => {
         if (!draggedProject) return;
         const deltaX = e.clientX - draggedProject.startX;
-
         if (draggedProject.mode === 'move') {
             const newLeft = Math.max(0, Math.min(totalWidth - draggedProject.currentWidth, draggedProject.originalLeft + deltaX));
             setDraggedProject(prev => ({ ...prev, currentLeft: newLeft }));
         } else if (draggedProject.mode === 'resize-left') {
             const maxDelta = draggedProject.originalWidth - monthWidth;
             const effectiveDelta = Math.min(maxDelta, Math.max(-draggedProject.originalLeft, deltaX));
-
             const newLeft = draggedProject.originalLeft + effectiveDelta;
             const newWidth = draggedProject.originalWidth - effectiveDelta;
-
             setDraggedProject(prev => ({ ...prev, currentLeft: newLeft, currentWidth: newWidth }));
         } else if (draggedProject.mode === 'resize-right') {
             const newWidth = Math.max(monthWidth, draggedProject.originalWidth + deltaX);
@@ -80,17 +76,12 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
         if (draggedProject && onUpdateProject) {
             let newStartDate = pixelToDate(draggedProject.currentLeft);
             let newEndDate = pixelToDate(draggedProject.currentLeft + draggedProject.currentWidth);
-
             if (newStartDate === newEndDate) {
                 const d = new Date(newStartDate);
                 d.setMonth(d.getMonth() + 1);
                 newEndDate = d.toISOString().slice(0, 7);
             }
-
-            onUpdateProject(draggedProject.areaId, draggedProject.id, {
-                start: newStartDate,
-                end: newEndDate
-            });
+            onUpdateProject(draggedProject.areaId, draggedProject.id, { start: newStartDate, end: newEndDate });
         }
         setDraggedProject(null);
     };
@@ -135,55 +126,44 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
                 }}
                 title={`${p.title} (${p.start} - ${p.end})`}
             >
+                {isEditor && (
+                    <div className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize z-30 hover:bg-white/20" onMouseDown={(e) => handleMouseDown(e, p, 'resize-left')}></div>
+                )}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize z-30 hover:bg-white/20"
-                    onMouseDown={(e) => handleMouseDown(e, p, 'resize-left')}
-                ></div>
-
-                <div
-                    className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing"
+                    className={`absolute inset-0 z-10 ${isEditor ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
                     onMouseDown={(e) => handleMouseDown(e, p, 'move')}
                 ></div>
-
                 <div className="relative z-0 flex items-center gap-1 w-full pointer-events-none">
                     <span className="flex-shrink-0">{getPriorityIcon(p.impact)}</span>
                     <span className="drop-shadow-sm font-medium truncate flex-grow">{p.title}</span>
                 </div>
-
-                <div
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize z-30 hover:bg-white/20"
-                    onMouseDown={(e) => handleMouseDown(e, p, 'resize-right')}
-                ></div>
+                {isEditor && (
+                    <div className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize z-30 hover:bg-white/20" onMouseDown={(e) => handleMouseDown(e, p, 'resize-right')}></div>
+                )}
             </div>
         );
     };
 
     return (
         <div className="w-full overflow-x-auto border border-gray-200 rounded-lg bg-white custom-scrollbar" ref={containerRef}>
-            <div style={{ width: `${totalWidth + (showSwimlanes ? 200 : 200)}px` }} className="relative">
+            <div style={{ width: `${totalWidth + 200}px` }} className="relative">
                 <div className="sticky top-0 z-20 bg-gray-50 border-b border-gray-200 flex">
                     <div className="w-48 flex-shrink-0 p-3 text-xs font-bold text-gray-500 uppercase border-r border-gray-200 bg-gray-50 sticky left-0 z-30">
                         {showSwimlanes ? 'Area' : 'Progetto'}
                     </div>
-
                     <div className="flex flex-grow">
                         {years.map(year => (
                             <div key={year} className="flex-1 border-r border-gray-300 last:border-0">
-                                <div className="text-center py-1 text-xs font-bold text-gray-700 bg-gray-100 border-b border-gray-200">
-                                    {year}
-                                </div>
+                                <div className="text-center py-1 text-xs font-bold text-gray-700 bg-gray-100 border-b border-gray-200">{year}</div>
                                 <div className="flex">
                                     {MONTH_NAMES.map((m, idx) => (
-                                        <div key={idx} className="flex-1 text-[9px] text-center py-1 text-gray-400 border-r border-gray-100 last:border-0" style={{ minWidth: monthWidth }}>
-                                            {m}
-                                        </div>
+                                        <div key={idx} className="flex-1 text-[9px] text-center py-1 text-gray-400 border-r border-gray-100 last:border-0" style={{ minWidth: monthWidth }}>{m}</div>
                                     ))}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-
                 <div className="relative min-h-[200px]">
                     <div className="absolute inset-0 flex pl-48 z-0 pointer-events-none">
                         {years.map(y => (
@@ -194,7 +174,6 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
                             </div>
                         ))}
                     </div>
-
                     {showSwimlanes ? (
                         areas.map(area => {
                             const areaProjects = projects.filter(p => p.areaId === area.id);
@@ -203,7 +182,7 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
                                     <div className="flex min-h-[44px] items-center">
                                         <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 px-3 py-2 flex items-center gap-2 sticky left-0 z-20">
                                             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: area.hex }}></div>
-                                            <span className="text-xs font-bold text-gray-700 uppercase truncate" title={area.label}>{area.label}</span>
+                                            <span className="text-xs font-bold text-gray-700 uppercase truncate">{area.label}</span>
                                         </div>
                                         <div className="flex-grow relative h-10 w-full">
                                             {areaProjects.map(p => renderProjectBar(p, area.hex))}
@@ -218,7 +197,7 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
                             const barColor = activeArea ? activeArea.hex : ARAD_BLUE;
                             return (
                                 <div key={p.id} className="flex items-center h-12 border-b border-gray-100 relative z-10 hover:bg-gray-50 group">
-                                    <div className="w-48 flex-shrink-0 px-3 truncate text-sm font-medium text-gray-800 border-r border-gray-200 bg-white sticky left-0 z-20 flex items-center h-full" title={p.title}>
+                                    <div className="w-48 flex-shrink-0 px-3 truncate text-sm font-medium text-gray-800 border-r border-gray-200 bg-white sticky left-0 z-20 flex items-center h-full">
                                         {p.title || 'Nuovo Progetto'}
                                     </div>
                                     <div className="flex-grow relative h-full w-full">

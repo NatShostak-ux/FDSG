@@ -6,7 +6,7 @@ import GanttChart from './GanttChart';
 import RadarChart from './RadarChart';
 import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
-const Dashboard = ({ activeScenario, setActiveView }) => {
+const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     const [isProjectPreviewOpen, setIsProjectPreviewOpen] = useState(false);
 
     const calculateTotalBudget = () => {
@@ -145,6 +145,7 @@ const Dashboard = ({ activeScenario, setActiveView }) => {
                         projects={allProjects}
                         areas={EXPERTISE_AREAS}
                         showSwimlanes={true}
+                        onUpdateProject={updateProjectBatch}
                     />
                 </div>
             </Card>

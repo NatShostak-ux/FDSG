@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X, Sparkles } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
+import NotebookLMChat from './NotebookLMChat';
+import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, GANTT_END_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
-const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateKSM }) => {
+const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
+    console.log("AreaEditor Render:", { activeView, scenarioTitle: activeScenario?.title, isEditor });
     const [isNotesOpen, setIsNotesOpen] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
     if (!area) return null;
@@ -15,6 +19,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const areaProjects = data.projects?.map(p => ({ ...p, areaId: area.id })) || [];
 
     const addProject = () => {
+        console.log("addProject clicked", { isEditor });
+        if (!isEditor) return;
         const newProject = {
             id: Date.now(),
             title: '',
@@ -23,15 +29,20 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             impact: 5,
             effort: 5
         };
-        updateAreaData(activeView, 'projects', [...(data.projects || []), newProject]);
+        const currentProjects = data.projects || [];
+        console.log("New project list:", [...currentProjects, newProject]);
+        updateAreaData(activeView, 'projects', [...currentProjects, newProject]);
     };
 
     const removeProject = (projectId) => {
+        if (!isEditor) return;
         const newProjects = data.projects.filter(p => p.id !== projectId);
         updateAreaData(activeView, 'projects', newProjects);
     };
 
     const addKSM = () => {
+        console.log("addKSM clicked", { isEditor });
+        if (!isEditor) return;
         const newKSM = {
             id: Date.now(),
             name: '',
@@ -41,24 +52,15 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             guardRail: '',
             alertLevel: ''
         };
-        updateAreaData(activeView, 'ksms', [...(data.ksms || []), newKSM]);
+        const currentKSMs = data.ksms || [];
+        console.log("New KSM list:", [...currentKSMs, newKSM]);
+        updateAreaData(activeView, 'ksms', [...currentKSMs, newKSM]);
     };
 
     const removeKSM = (ksmId) => {
+        if (!isEditor) return;
         const newKSMs = (data.ksms || []).filter(k => k.id !== ksmId);
         updateAreaData(activeView, 'ksms', newKSMs);
-    };
-
-    const handleUpdateProject = (areaId, projectId, newDates) => {
-        updateProject(areaId, projectId, Object.keys(newDates)[0], Object.values(newDates)[0]);
-        // Note: The Gantt chart returns an object with start/end, but our updateProject helper expects field/value
-        // We might need to adjust this in App.jsx or here. 
-        // Let's assume passed updateProject handles single field updates. 
-        // For drag and drop from Gantt, it sends { start, end }.
-        // We need a way to handle batch updates or multiple calls.
-        // For now, let's just use the App's handleUpdateProject logic which is passed as a prop if we were in App.
-        // But here we receive `updateProject` which is likely `(areaId, projectId, field, value)`.
-        // We'll need to fix this integration.
     };
 
     return (
@@ -74,13 +76,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={20} /></button>
                         </div>
                         <div className="p-6">
-                            <textarea
-                                placeholder="Aggiungi note strategiche, vincoli o osservazioni..."
-                                className="w-full h-64 border-gray-300 rounded-lg focus:ring-opacity-50 text-sm p-4 bg-yellow-50/50 border border-yellow-200"
-                                style={{ '--tw-ring-color': area.hex }}
-                                value={data.comments || ''}
-                                onChange={(e) => updateAreaData(activeView, 'comments', e.target.value)}
-                            />
+                            <div className="relative">
+                                <AdvancedEditor
+                                    value={data.comments || ''}
+                                    onChange={(val) => updateAreaData(activeView, 'comments', val)}
+                                    placeholder={`Inserisci note per ${area.label}...`}
+                                    disabled={!isEditor}
+                                />
+                            </div>
                         </div>
                         <div className="px-6 py-4 bg-gray-50 flex justify-end">
                             <Button onClick={() => setIsNotesOpen(false)} variant="secondary">Chiudi</Button>
@@ -106,6 +109,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 >
                                     <StickyNote size={12} /> Note / Appunti
                                 </button>
+                                <button
+                                    onClick={() => setIsChatOpen(true)}
+                                    className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium border border-blue-200 shadow-sm"
+                                >
+                                    <Sparkles size={12} /> NotebookLM AI
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -120,7 +129,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     max="10"
                                     value={data.importance || 0}
                                     onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))}
-                                    className="w-12 text-center text-2xl font-bold bg-transparent border-0 border-b-2 focus:ring-0 p-0 text-white placeholder-gray-500 focus:border-white"
+                                    disabled={!isEditor}
+                                    className={`w-12 text-center text-2xl font-bold bg-transparent border-0 border-b-2 focus:ring-0 p-0 text-white placeholder-gray-500 focus:border-white ${!isEditor ? 'cursor-not-allowed opacity-50' : ''}`}
                                     style={{ borderColor: ARAD_GOLD }}
                                 />
                                 <span className="text-sm opacity-60 font-light">/10</span>
@@ -133,10 +143,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 <span className="text-gray-400 font-light">€</span>
                                 <input
                                     type="number"
+                                    value={data.budget ?? ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateAreaData(activeView, 'budget', val === '' ? 0 : parseFloat(val));
+                                    }}
+                                    disabled={!isEditor}
+                                    className={`w-full border-0 focus:ring-0 p-0 font-bold text-lg text-gray-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${!isEditor ? 'cursor-not-allowed text-gray-500' : ''}`}
                                     placeholder="0"
-                                    className="w-full border-0 focus:ring-0 p-0 font-bold text-lg text-gray-800"
-                                    value={data.budget || ''}
-                                    onChange={(e) => updateAreaData(activeView, 'budget', parseFloat(e.target.value))}
                                 />
                             </div>
                         </div>
@@ -145,27 +159,29 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </div>
 
             <Card title="Obiettivi Macro" icon={Target}>
-                <textarea
-                    placeholder={`Definisci gli obiettivi strategici per ${area.label}...`}
-                    className="w-full border-gray-300 rounded-lg focus:ring-opacity-50 min-h-[80px] text-sm"
-                    style={{ '--tw-ring-color': area.hex, '--tw-border-opacity': 1 }}
-                    value={data.objectives}
-                    onChange={(e) => updateAreaData(activeView, 'objectives', e.target.value)}
-                />
+                <div className="relative">
+                    <AdvancedEditor
+                        value={data.objectives}
+                        onChange={(val) => updateAreaData(activeView, 'objectives', val)}
+                        placeholder="Definisci gli obiettivi strategici per questa area..."
+                        disabled={!isEditor}
+                    />
+                </div>
             </Card>
 
             <Card title="Evoluzione Temporale (Roadmap 3 Anni)" icon={Calendar}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
-                        <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col h-full">
                             <div className="text-xs font-bold text-gray-500 uppercase mb-2">Anno {year}</div>
-                            <textarea
-                                placeholder={`Focus Anno ${year}...`}
-                                className="w-full bg-white border-gray-200 text-xs rounded-md focus:ring-opacity-50 min-h-[60px]"
-                                style={{ '--tw-ring-color': area.hex }}
-                                value={data[`evolution_y${year}`]}
-                                onChange={(e) => updateAreaData(activeView, `evolution_y${year}`, e.target.value)}
-                            />
+                            <div className="relative flex-grow h-full">
+                                <AdvancedEditor
+                                    value={data[`evolution_y${year}`]}
+                                    onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)}
+                                    placeholder={`Focus Anno ${year}...`}
+                                    disabled={!isEditor}
+                                />
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -174,7 +190,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             <Card
                 title="Pianificazione Gantt (2026-2029)"
                 icon={Calendar}
-                action={<Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700">Aggiungi Progetto</Button>}
+                action={isEditor && <Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700">Aggiungi Progetto</Button>}
                 noPadding
             >
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
@@ -182,11 +198,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         projects={areaProjects}
                         areas={EXPERTISE_AREAS}
                         activeAreaId={area.id}
-                        onUpdateProject={(areaId, projectId, newDates) => {
-                            // We need to handle this prop correctly in App.jsx and pass a function that handles this
-                            // For now, we are not passing this handler from App to AreaEditor, we need to fix this in App.jsx
-                            // We will use a prop `handleBatchUpdateProject` if available, or just ignore for now and fix in integration.
-                        }}
+                        onUpdateProject={updateProjectBatch}
+                        isEditor={isEditor}
                     />
                 </div>
 
@@ -200,12 +213,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     <input
                                         type="text"
                                         placeholder="Nome del progetto / iniziativa..."
-                                        className="flex-grow font-semibold text-gray-800 border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 focus:border-current"
-                                        style={{ color: area.hex }}
+                                        className={`flex-grow font-semibold text-gray-800 border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 focus:border-current ${!isEditor ? 'cursor-not-allowed' : ''}`}
+                                        style={{ color: isEditor ? area.hex : '#6b7280' }}
                                         value={project.title}
                                         onChange={(e) => updateProject(activeView, project.id, 'title', e.target.value)}
+                                        disabled={!isEditor}
                                     />
-                                    <button onClick={() => removeProject(project.id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={16} /></button>
+                                    {isEditor && <button onClick={() => removeProject(project.id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 size={16} /></button>}
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -216,7 +230,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             min={`${GANTT_START_YEAR}-01`} max={`${GANTT_END_YEAR}-12`}
                                             value={project.start}
                                             onChange={(e) => updateProject(activeView, project.id, 'start', e.target.value)}
-                                            className="bg-transparent border-0 p-0 text-sm w-32 focus:ring-0 text-gray-700"
+                                            disabled={!isEditor}
+                                            className={`bg-transparent border-0 p-0 text-sm w-32 focus:ring-0 text-gray-700 ${!isEditor ? 'cursor-not-allowed' : ''}`}
                                         />
                                         <span className="text-gray-400">→</span>
                                         <input
@@ -224,19 +239,21 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             min={`${GANTT_START_YEAR}-01`} max={`${GANTT_END_YEAR}-12`}
                                             value={project.end}
                                             onChange={(e) => updateProject(activeView, project.id, 'end', e.target.value)}
-                                            className="bg-transparent border-0 p-0 text-sm w-32 focus:ring-0 text-gray-700"
+                                            disabled={!isEditor}
+                                            className={`bg-transparent border-0 p-0 text-sm w-32 focus:ring-0 text-gray-700 ${!isEditor ? 'cursor-not-allowed' : ''}`}
                                         />
                                     </div>
 
-                                    <div className="flex gap-4 items-center">
+                                    <div className="flex items-center gap-4">
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs uppercase font-bold text-gray-400">Priorità</span>
                                             <input
                                                 type="number" min="1" max="10"
                                                 value={project.impact}
                                                 onChange={(e) => updateProject(activeView, project.id, 'impact', parseInt(e.target.value))}
-                                                className="w-12 h-8 text-center border-gray-200 rounded text-sm font-bold"
-                                                style={{ color: area.hex }}
+                                                disabled={!isEditor}
+                                                className={`w-12 h-8 text-center border-gray-200 rounded text-sm font-bold ${!isEditor ? 'cursor-not-allowed text-gray-400' : ''}`}
+                                                style={{ color: isEditor ? area.hex : '#9ca3af' }}
                                             />
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -245,7 +262,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                 type="number" min="1" max="10"
                                                 value={project.effort}
                                                 onChange={(e) => updateProject(activeView, project.id, 'effort', parseInt(e.target.value))}
-                                                className="w-12 h-8 text-center border-gray-200 rounded text-sm text-gray-600"
+                                                disabled={!isEditor}
+                                                className={`w-12 h-8 text-center border-gray-200 rounded text-sm text-gray-600 ${!isEditor ? 'cursor-not-allowed opacity-50' : ''}`}
                                             />
                                         </div>
                                     </div>
@@ -256,11 +274,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* REPLACED: Key Success Metrics instead of Roadmap Narrative */}
             <Card
                 title="Key Success Metrics (KSM)"
                 icon={Target}
-                action={<Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>}
+                action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>}
                 noPadding
             >
                 <div className="p-6 space-y-4 bg-slate-50/50">
@@ -272,12 +289,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
                     {(data.ksms || []).map((ksm) => (
                         <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative group">
-                            <button
-                                onClick={() => removeKSM(ksm.id)}
-                                className="absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            {isEditor && (
+                                <button
+                                    onClick={() => removeKSM(ksm.id)}
+                                    className="absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1 transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
@@ -285,9 +304,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     <input
                                         type="text"
                                         placeholder="Es. Tasso di Conversione"
-                                        className="w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm font-semibold text-gray-800"
+                                        className={`w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm font-semibold text-gray-800 ${!isEditor ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                                         value={ksm.name}
                                         onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)}
+                                        disabled={!isEditor}
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -296,9 +316,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. CR"
-                                            className="w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm"
+                                            className={`w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm ${!isEditor ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                                             value={ksm.abbr}
                                             onChange={(e) => updateKSM(activeView, ksm.id, 'abbr', e.target.value)}
+                                            disabled={!isEditor}
                                         />
                                     </div>
                                     <div>
@@ -306,9 +327,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. Ordini / Visite"
-                                            className="w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm bg-gray-50 font-mono text-xs"
+                                            className={`w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm font-mono text-xs ${!isEditor ? 'bg-gray-50 cursor-not-allowed' : 'bg-gray-50'}`}
                                             value={ksm.formula}
                                             onChange={(e) => updateKSM(activeView, ksm.id, 'formula', e.target.value)}
+                                            disabled={!isEditor}
                                         />
                                     </div>
                                 </div>
@@ -316,13 +338,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
                             <div className="mb-4">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrizione (Cosa misura)</label>
-                                <textarea
-                                    placeholder="Descrivi lo scopo della metrica..."
-                                    className="w-full border-gray-200 rounded focus:ring-1 focus:ring-blue-500 text-sm resize-none"
-                                    rows={2}
-                                    value={ksm.description}
-                                    onChange={(e) => updateKSM(activeView, ksm.id, 'description', e.target.value)}
-                                />
+                                <div className="relative">
+                                    <AdvancedEditor
+                                        value={ksm.description}
+                                        onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)}
+                                        placeholder="Descrivi lo scopo della metrica..."
+                                        disabled={!isEditor}
+                                    />
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -333,9 +356,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. > 2.5%"
-                                            className="w-full bg-transparent border-0 border-b border-gray-300 focus:ring-0 px-0 py-1 text-sm text-green-700 font-medium placeholder-gray-400"
+                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-green-700 font-medium placeholder-gray-400 ${!isEditor ? 'cursor-not-allowed opacity-60' : ''}`}
                                             value={ksm.guardRail}
                                             onChange={(e) => updateKSM(activeView, ksm.id, 'guardRail', e.target.value)}
+                                            disabled={!isEditor}
                                         />
                                     </div>
                                 </div>
@@ -346,9 +370,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. < 1.0%"
-                                            className="w-full bg-transparent border-0 border-b border-gray-300 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-gray-400"
+                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-gray-400 ${!isEditor ? 'cursor-not-allowed opacity-60' : ''}`}
                                             value={ksm.alertLevel}
                                             onChange={(e) => updateKSM(activeView, ksm.id, 'alertLevel', e.target.value)}
+                                            disabled={!isEditor}
                                         />
                                     </div>
                                 </div>
@@ -358,16 +383,22 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* Routine */}
             <Card title="Attività di Routine (Day-by-Day)" icon={Clock}>
-                <textarea
-                    placeholder="Quali saranno le attività operative quotidiane per il team?"
-                    className="w-full border-gray-300 rounded-lg focus:ring-opacity-50 min-h-[100px] text-sm"
-                    style={{ '--tw-ring-color': area.hex }}
-                    value={data.routine}
-                    onChange={(e) => updateAreaData(activeView, 'routine', e.target.value)}
-                />
+                <div className="relative">
+                    <AdvancedEditor
+                        value={data.routine}
+                        onChange={(val) => updateAreaData(activeView, 'routine', val)}
+                        placeholder="Quali saranno le attività operative quotidiane per il team?"
+                        disabled={!isEditor}
+                    />
+                </div>
             </Card>
+
+            <NotebookLMChat
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                areaLabel={area.label}
+            />
         </div>
     );
 };
