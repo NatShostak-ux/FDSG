@@ -369,4 +369,37 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. < 1.0%"
-                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-
+                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-gray-400 ${!isEditor ? 'cursor-not-allowed opacity-60' : ''}`}
+                                            value={ksm.alertLevel}
+                                            onChange={(e) => updateKSM(activeView, ksm.id, 'alertLevel', e.target.value)}
+                                            disabled={!isEditor}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
+            <Card title="Attività di Routine (Day-by-Day)" icon={Clock}>
+                <div className="relative">
+                    <AdvancedEditor
+                        value={data.routine || ''}
+                        onChange={(val) => updateAreaData(activeView, 'routine', val)}
+                        placeholder="Quali saranno le attività operative quotidiane per il team?"
+                        disabled={!isEditor}
+                    />
+                </div>
+            </Card>
+
+            <NotebookLMChat
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                areaLabel={area.label}
+            />
+        </div>
+    );
+};
+
+export default AreaEditor;
