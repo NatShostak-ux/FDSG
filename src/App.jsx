@@ -188,14 +188,30 @@ function App() {
 
   const handleBatchUpdateProject = (areaId, updatedProjects) => {
     if (!isEditor) return;
+    
+    // FIX: Se updatedProjects non è un array, usciamo subito per non rompere il DB
+    if (!Array.isArray(updatedProjects)) {
+      console.error("Tentativo di salvare progetti non validi:", updatedProjects);
+      return;
+    }
+
     setScenarios(prev => {
       const scenario = prev.find(s => s.id === activeScenarioId);
       if (!scenario) return prev;
+      
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
+      
       const updatedScenario = {
         ...scenario,
-        data: { ...scenario.data, [areaId]: { ...areaData, projects: updatedProjects } }
+        data: { 
+          ...scenario.data, 
+          [areaId]: { 
+            ...areaData, 
+            projects: updatedProjects // Qui ora siamo sicuri che sia un array
+          } 
+        }
       };
+      
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
       persistScenarios(updated);
       return updated;
