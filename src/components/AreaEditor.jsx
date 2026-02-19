@@ -8,7 +8,6 @@ import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, GANTT_END_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
-    console.log("AreaEditor Render:", { activeView, scenarioTitle: activeScenario?.title, isEditor });
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -16,10 +15,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     if (!area) return null;
 
     const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
-    const areaProjects = data.projects?.map(p => ({ ...p, areaId: area.id })) || [];
+    
+    // FIX: Protezione contro dati corrotti (se projects non è un array, usa lista vuota)
+    const safeProjects = Array.isArray(data.projects) ? data.projects : [];
+    const areaProjects = safeProjects.map(p => ({ ...p, areaId: area.id }));
 
     const addProject = () => {
-        console.log("addProject clicked", { isEditor });
         if (!isEditor) return;
         const newProject = {
             id: Date.now(),
@@ -29,19 +30,18 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             impact: 5,
             effort: 5
         };
-        const currentProjects = data.projects || [];
-        console.log("New project list:", [...currentProjects, newProject]);
+        // FIX: Assicura che currentProjects sia sempre un array prima dello spread
+        const currentProjects = Array.isArray(data.projects) ? data.projects : [];
         updateAreaData(activeView, 'projects', [...currentProjects, newProject]);
     };
 
     const removeProject = (projectId) => {
-        if (!isEditor) return;
+        if (!isEditor || !Array.isArray(data.projects)) return;
         const newProjects = data.projects.filter(p => p.id !== projectId);
         updateAreaData(activeView, 'projects', newProjects);
     };
 
     const addKSM = () => {
-        console.log("addKSM clicked", { isEditor });
         if (!isEditor) return;
         const newKSM = {
             id: Date.now(),
@@ -52,14 +52,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             guardRail: '',
             alertLevel: ''
         };
-        const currentKSMs = data.ksms || [];
-        console.log("New KSM list:", [...currentKSMs, newKSM]);
+        const currentKSMs = Array.isArray(data.ksms) ? data.ksms : [];
         updateAreaData(activeView, 'ksms', [...currentKSMs, newKSM]);
     };
 
     const removeKSM = (ksmId) => {
-        if (!isEditor) return;
-        const newKSMs = (data.ksms || []).filter(k => k.id !== ksmId);
+        if (!isEditor || !Array.isArray(data.ksms)) return;
+        const newKSMs = data.ksms.filter(k => k.id !== ksmId);
         updateAreaData(activeView, 'ksms', newKSMs);
     };
 
@@ -161,7 +160,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             <Card title="Obiettivi Macro" icon={Target}>
                 <div className="relative">
                     <AdvancedEditor
-                        value={data.objectives}
+                        value={data.objectives || ''}
                         onChange={(val) => updateAreaData(activeView, 'objectives', val)}
                         placeholder="Definisci gli obiettivi strategici per questa area..."
                         disabled={!isEditor}
@@ -176,7 +175,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <div className="text-xs font-bold text-gray-500 uppercase mb-2">Anno {year}</div>
                             <div className="relative flex-grow h-full">
                                 <AdvancedEditor
-                                    value={data[`evolution_y${year}`]}
+                                    value={data[`evolution_y${year}`] || ''}
                                     onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)}
                                     placeholder={`Focus Anno ${year}...`}
                                     disabled={!isEditor}
@@ -281,13 +280,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 noPadding
             >
                 <div className="p-6 space-y-4 bg-slate-50/50">
-                    {(!data.ksms || data.ksms.length === 0) && (
+                    {(!Array.isArray(data.ksms) || data.ksms.length === 0) && (
                         <div className="text-center text-gray-400 italic text-sm py-4">
                             Nessuna metrica definita. Aggiungine una per monitorare il successo.
                         </div>
                     )}
 
-                    {(data.ksms || []).map((ksm) => (
+                    {(Array.isArray(data.ksms) ? data.ksms : []).map((ksm) => (
                         <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative group">
                             {isEditor && (
                                 <button
@@ -340,7 +339,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrizione (Cosa misura)</label>
                                 <div className="relative">
                                     <AdvancedEditor
-                                        value={ksm.description}
+                                        value={ksm.description || ''}
                                         onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)}
                                         placeholder="Descrivi lo scopo della metrica..."
                                         disabled={!isEditor}
@@ -370,37 +369,4 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <input
                                             type="text"
                                             placeholder="Es. < 1.0%"
-                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-gray-400 ${!isEditor ? 'cursor-not-allowed opacity-60' : ''}`}
-                                            value={ksm.alertLevel}
-                                            onChange={(e) => updateKSM(activeView, ksm.id, 'alertLevel', e.target.value)}
-                                            disabled={!isEditor}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </Card>
-
-            <Card title="Attività di Routine (Day-by-Day)" icon={Clock}>
-                <div className="relative">
-                    <AdvancedEditor
-                        value={data.routine}
-                        onChange={(val) => updateAreaData(activeView, 'routine', val)}
-                        placeholder="Quali saranno le attività operative quotidiane per il team?"
-                        disabled={!isEditor}
-                    />
-                </div>
-            </Card>
-
-            <NotebookLMChat
-                isOpen={isChatOpen}
-                onClose={() => setIsChatOpen(false)}
-                areaLabel={area.label}
-            />
-        </div>
-    );
-};
-
-export default AreaEditor;
+                                            className={`w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 px-0 py-1 text-sm text-red-700 font-medium placeholder-
