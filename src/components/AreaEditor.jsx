@@ -16,7 +16,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
     
-    // FIX: Protezione contro dati corrotti (se projects non è un array, usa lista vuota)
+    // Protezione contro dati corrotti
     const safeProjects = Array.isArray(data.projects) ? data.projects : [];
     const areaProjects = safeProjects.map(p => ({ ...p, areaId: area.id }));
 
@@ -30,7 +30,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             impact: 5,
             effort: 5
         };
-        // FIX: Assicura che currentProjects sia sempre un array prima dello spread
         const currentProjects = Array.isArray(data.projects) ? data.projects : [];
         updateAreaData(activeView, 'projects', [...currentProjects, newProject]);
     };
@@ -93,7 +92,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-
                     <div className="flex items-center gap-4 flex-grow">
                         <div className="p-3 rounded-xl text-white" style={{ backgroundColor: area.hex }}>
                             <area.icon size={28} />
