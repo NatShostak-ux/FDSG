@@ -189,9 +189,13 @@ function App() {
   const handleBatchUpdateProject = (areaId, updatedProjects) => {
     if (!isEditor) return;
     
-    // FIX: Se updatedProjects non è un array, usciamo subito per non rompere il DB
-    if (!Array.isArray(updatedProjects)) {
-      console.error("Tentativo di salvare progetti non validi:", updatedProjects);
+    // Versione flessibile: estrae l'array anche se è dentro un oggetto
+    const projectsArray = Array.isArray(updatedProjects) 
+      ? updatedProjects 
+      : (updatedProjects?.projects || []);
+
+    if (projectsArray.length === 0 && !Array.isArray(updatedProjects)) {
+      console.warn("Dati Gantt non validi o vuoti:", updatedProjects);
       return;
     }
 
@@ -207,7 +211,7 @@ function App() {
           ...scenario.data, 
           [areaId]: { 
             ...areaData, 
-            projects: updatedProjects // Qui ora siamo sicuri che sia un array
+            projects: projectsArray 
           } 
         }
       };
