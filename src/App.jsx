@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, LogOut, Download, Table } from 'lucide-react';
+import { Plus, Trash2, LogOut, Download, Table, RefreshCw } from 'lucide-react';
 import Button from './components/ui/Button';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -298,6 +298,28 @@ function App() {
             <div className="h-8 w-px bg-gray-200"></div>
 
             <div className="flex items-center gap-3">
+              {isEditor && !import.meta.env.PROD && (
+                <button
+                  onClick={async () => {
+                    const btn = document.getElementById('sync-btn');
+                    btn.classList.add('animate-spin');
+                    try {
+                      const res = await fetch('http://localhost:3000/api/sync', { method: 'POST' });
+                      const data = await res.json();
+                      if (data.status === 'success') alert('Sincronizzazione Cloud completata!');
+                      else alert('Errore: ' + data.error);
+                    } catch (e) {
+                      alert('Assicurati che il server locale sia attivo.');
+                    } finally {
+                      btn.classList.remove('animate-spin');
+                    }
+                  }}
+                  className="p-2 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                  title="Sincronizza NotebookLM con il Cloud"
+                >
+                  <RefreshCw id="sync-btn" size={20} />
+                </button>
+              )}
               <button
                 onClick={handleExportCSV}
                 className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
