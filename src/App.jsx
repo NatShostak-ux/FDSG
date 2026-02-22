@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, LogOut, FileText } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import Button from './components/ui/Button';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -19,15 +20,12 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditor, setIsEditor] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // Stato per il download PDF
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        setIsEditor(currentUser.email?.endsWith('@arad.digital'));
-      } else {
-        setIsEditor(false);
-      }
+      setIsEditor(currentUser?.email?.endsWith('@arad.digital') || false);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -36,60 +34,57 @@ function App() {
   useEffect(() => {
     if (!user) return;
     const docRef = doc(db, "strategy", "hub");
-
     const initDoc = async () => {
       try {
         const snap = await getDoc(docRef);
-        if (!snap.exists()) {
-          await setDoc(docRef, { scenarios: INITIAL_SCENARIOS });
-        }
-      } catch (err) {
-        console.error("Initialization check failed:", err);
-      }
+        if (!snap.exists()) await setDoc(docRef, { scenarios: INITIAL_SCENARIOS });
+      } catch (err) { console.error("Init err:", err); }
     };
     initDoc();
 
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        const loadedScenarios = data.scenarios || [];
+        const loadedScenarios = docSnap.data().scenarios || [];
         setScenarios(loadedScenarios);
-        if (loadedScenarios.length > 0) {
-          setActiveScenarioId(prevId => prevId || loadedScenarios[0].id);
-        }
-      } else {
-        setScenarios([]);
+        if (loadedScenarios.length > 0 && !activeScenarioId) setActiveScenarioId(loadedScenarios[0].id);
       }
       setLoading(false);
-    }, (error) => {
-      console.error("Firestore Error:", error);
-      setLoading(false);
     });
-
     return () => unsubscribe();
   }, [user]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
-  if (!user) return <Login />;
-
-  const activeScenario = scenarios.find(s => s.id === activeScenarioId) || scenarios[0] || { title: '', description: '', data: {} };
+  // FUNZIONE PER IL DOWNLOAD DIRETTO DEL PDF
+  const handleExportPDF = () => {
+    setIsGeneratingPDF(true); // Attiva la visualizzazione "tutto espanso"
+    
+    // Aspettiamo 800ms per dare a React il tempo di renderizzare tutti i testi lunghi
+    setTimeout(() => {
+      const element = document.getElementById('pdf-export-container');
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Strategy_Hub_${activeScenario?.title || 'Export'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+      
+      html2pdf().set(opt).from(element).save().then(() => {
+        setIsGeneratingPDF(false); // Scaricato il file, torna tutto normale!
+      });
+    }, 800);
+  };
 
   const persistScenarios = async (newScenarios) => {
     if (!isEditor) return;
-    try {
-      localStorage.setItem('fdsg_backup', JSON.stringify({ timestamp: new Date().toISOString(), scenarios: newScenarios }));
-      await setDoc(doc(db, "strategy", "hub"), { scenarios: newScenarios, lastUpdated: new Date().toISOString(), updatedBy: user.email });
-    } catch (e) {
-      console.error("Persistence Error:", e);
-    }
+    try { await setDoc(doc(db, "strategy", "hub"), { scenarios: newScenarios, lastUpdated: new Date().toISOString(), updatedBy: user.email }); } catch (e) {}
   };
 
   const updateScenarioMeta = (key, value) => {
     if (!isEditor) return;
     setScenarios(prev => {
       const updated = prev.map(s => s.id === activeScenarioId ? { ...s, [key]: value } : s);
-      persistScenarios(updated);
-      return updated;
+      persistScenarios(updated); return updated;
     });
   };
 
@@ -97,9 +92,8 @@ function App() {
     if (!isEditor) return;
     const newId = Date.now();
     setScenarios(prev => {
-      const updated = [...prev, { id: newId, title: 'Nuovo Scenario', description: 'Descrizione dello scenario...', data: {} }];
-      persistScenarios(updated);
-      return updated;
+      const updated = [...prev, { id: newId, title: 'Nuovo Scenario', description: '', data: {} }];
+      persistScenarios(updated); return updated;
     });
     setActiveScenarioId(newId);
   };
@@ -123,8 +117,7 @@ function App() {
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
       const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, [field]: value } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
-      persistScenarios(updated);
-      return updated;
+      persistScenarios(updated); return updated;
     });
   };
 
@@ -138,8 +131,7 @@ function App() {
       const updatedProjects = currentProjects.map(p => p.id === projectId ? { ...p, [field]: value } : p);
       const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, projects: updatedProjects } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
-      persistScenarios(updated);
-      return updated;
+      persistScenarios(updated); return updated;
     });
   };
 
@@ -149,19 +141,10 @@ function App() {
       const scenario = prev.find(s => s.id === activeScenarioId);
       if (!scenario) return prev;
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
-      const currentProjects = Array.isArray(areaData.projects) ? areaData.projects : [];
-      let finalProjects;
-      if (Array.isArray(projectIdOrArray)) {
-        finalProjects = projectIdOrArray;
-      } else if (projectIdOrArray && updatedDates) {
-        finalProjects = currentProjects.map(p => p.id === projectIdOrArray ? { ...p, ...updatedDates } : p);
-      } else {
-        return prev;
-      }
+      let finalProjects = Array.isArray(projectIdOrArray) ? projectIdOrArray : (Array.isArray(areaData.projects) ? areaData.projects : []).map(p => p.id === projectIdOrArray ? { ...p, ...updatedDates } : p);
       const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, projects: finalProjects } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
-      persistScenarios(updated);
-      return updated;
+      persistScenarios(updated); return updated;
     });
   };
 
@@ -171,62 +154,62 @@ function App() {
       const scenario = prev.find(s => s.id === activeScenarioId);
       if (!scenario) return prev;
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
-      const currentKSMs = Array.isArray(areaData.ksms) ? areaData.ksms : [];
-      const updatedKSMs = currentKSMs.map(k => k.id === ksmId ? { ...k, [field]: value } : k);
+      const updatedKSMs = (Array.isArray(areaData.ksms) ? areaData.ksms : []).map(k => k.id === ksmId ? { ...k, [field]: value } : k);
       const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, ksms: updatedKSMs } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
-      persistScenarios(updated);
-      return updated;
+      persistScenarios(updated); return updated;
     });
   };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
+  if (!user) return <Login />;
+
+  const activeScenario = scenarios.find(s => s.id === activeScenarioId) || scenarios[0] || { title: '', description: '', data: {} };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12" style={{ fontFamily: 'Outfit, sans-serif' }}>
       
-      {/* INIEZIONE CSS PER STAMPA PERFETTA PDF */}
+      {/* CSS Dinamico per sbloccare l'altezza dei testi durante il PDF */}
       <style>{`
-        @media print {
-          aside, header, .print\\:hidden { display: none !important; }
-          main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
-          .custom-scrollbar, textarea, .ql-container, .ql-editor { height: auto !important; max-height: none !important; overflow: visible !important; white-space: pre-wrap !important; }
-          .ql-toolbar { display: none !important; }
-          .shadow-sm, .shadow-lg, .shadow-2xl { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
-          .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        }
+        .pdf-mode .ql-container, .pdf-mode .ql-editor { height: auto !important; max-height: none !important; overflow: visible !important; }
+        .pdf-mode .ql-toolbar { display: none !important; }
+        .pdf-mode .custom-scrollbar { overflow: visible !important; max-height: none !important; }
       `}</style>
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 print:hidden">
-        <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold tracking-tight" style={{ color: ARAD_BLUE }}>ARAD <span style={{ color: ARAD_GOLD }}>Digital</span></span>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900 leading-tight">Feudi di San Gregorio</span>
-              <span className="text-xs font-medium text-gray-500">Strategy Hub | {activeScenario?.title}</span>
+      {/* Header visibile solo se non stiamo scaricando il PDF */}
+      {!isGeneratingPDF && (
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+          <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-2xl font-bold tracking-tight" style={{ color: ARAD_BLUE }}>ARAD <span style={{ color: ARAD_GOLD }}>Digital</span></span>
+              <div className="h-6 w-px bg-gray-300"></div>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-gray-900 leading-tight">Feudi di San Gregorio</span>
+                <span className="text-xs font-medium text-gray-500">Strategy Hub | {activeScenario?.title}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col text-right">
+                <span className="text-sm font-bold text-gray-900 leading-tight">{user.email}</span>
+                <span className={`text-xs font-bold uppercase ${isEditor ? 'text-blue-600' : 'text-gray-400'}`}>{isEditor ? 'Editor' : 'Viewer'}</span>
+              </div>
+              
+              <button onClick={handleExportPDF} className="p-2 text-red-500 hover:text-red-700 rounded-lg transition-colors flex items-center gap-1" title="Scarica PDF">
+                <FileText size={20} /> <span className="text-sm font-bold">Scarica PDF</span>
+              </button>
+              
+              <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg">
+                <LogOut size={18} /><span>Esci</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col text-right">
-              <span className="text-sm font-bold text-gray-900 leading-tight">{user.email}</span>
-              <span className={`text-xs font-bold uppercase ${isEditor ? 'text-blue-600' : 'text-gray-400'}`}>{isEditor ? 'Editor' : 'Viewer'}</span>
-            </div>
-            
-            {/* NUOVO BOTTONE SALVATAGGIO PDF */}
-            <button onClick={() => window.print()} className="p-2 text-gray-400 hover:text-red-600 rounded-lg transition-colors" title="Salva Scenario in PDF">
-              <FileText size={22} />
-            </button>
-            
-            <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg">
-              <LogOut size={18} /><span>Esci</span>
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="max-w-[1400px] mx-auto px-4 py-8">
-        {scenarios.length > 0 && (
-          <div className="mb-8 print:hidden">
+      {/* ID target per html2pdf e classe dinamica per sbloccare i testi */}
+      <main id="pdf-export-container" className={`max-w-[1400px] mx-auto px-4 py-8 bg-slate-50 ${isGeneratingPDF ? 'pdf-mode' : ''}`}>
+        {scenarios.length > 0 && !isGeneratingPDF && (
+          <div className="mb-8">
             <div className="flex items-center gap-2 overflow-x-auto pb-4">
               {scenarios.map(scenario => (
                 <button
@@ -245,26 +228,15 @@ function App() {
               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100">
                 {isEditor && <button onClick={() => handleDeleteScenario(activeScenarioId)} className="text-gray-400 hover:text-red-600"><Trash2 size={18} /></button>}
               </div>
-              <input
-                type="text"
-                value={activeScenario?.title || ''}
-                onChange={(e) => updateScenarioMeta('title', e.target.value)}
-                disabled={!isEditor}
-                className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1"
-                placeholder="Titolo Scenario"
-              />
-              <AdvancedEditor
-                value={activeScenario?.description || ''}
-                onChange={(val) => updateScenarioMeta('description', val)}
-                placeholder="Aggiungi una descrizione..."
-                disabled={!isEditor}
-              />
+              <input type="text" value={activeScenario?.title || ''} onChange={(e) => updateScenarioMeta('title', e.target.value)} disabled={!isEditor} className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1" placeholder="Titolo Scenario" />
+              <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione..." disabled={!isEditor} />
             </div>
           </div>
         )}
 
         <div className="flex gap-6 items-start relative">
-          <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />
+          {!isGeneratingPDF && <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />}
+          
           <div className="flex-grow min-w-0 transition-all duration-300">
             {activeView === 'dashboard' ? (
               <Dashboard activeScenario={activeScenario} setActiveView={setActiveView} updateProjectBatch={handleBatchUpdateProject} isEditor={isEditor} />
@@ -272,7 +244,7 @@ function App() {
               <AreaEditor
                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
                 updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
-                updateKSM={updateKSM} isEditor={isEditor}
+                updateKSM={updateKSM} isEditor={isEditor} isGeneratingPDF={isGeneratingPDF}
               />
             )}
           </div>
