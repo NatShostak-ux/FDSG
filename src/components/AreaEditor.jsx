@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Sparkles, ChevronRight } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X, Sparkles, ChevronRight, Check } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
@@ -11,6 +11,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    
+    // Stato per il nuovo input delle attività daily
+    const [newRoutineTask, setNewRoutineTask] = useState("");
 
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
     if (!area) return null;
@@ -21,6 +24,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const areaBudgetMin = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMin) || 0), 0);
     const areaBudgetMax = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMax) || 0), 0);
+
+    // Gestione Array per Daily Routine (migrazione sicura se prima era una stringa)
+    const routineTasks = Array.isArray(data.routine) ? data.routine : [];
 
     useEffect(() => {
         if (!selectedProjectId && areaProjects.length > 0) {
@@ -78,7 +84,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     };
 
-    // FUNZIONE AGGIORNATA PER LE NUOVE KSM
     const addKSM = () => {
         if (!isEditor) return;
         const newKSM = {
@@ -96,6 +101,32 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!isEditor) return;
         const currentKSMs = Array.isArray(data.ksms) ? data.ksms : [];
         updateAreaData(activeView, 'ksms', currentKSMs.filter(k => k.id !== ksmId));
+    };
+
+    // Funzioni per Daily Routine Tasks
+    const handleAddRoutineTask = () => {
+        if (!newRoutineTask.trim() || !isEditor) return;
+        const newTask = {
+            id: Date.now(),
+            text: newRoutineTask.trim(),
+            completed: false
+        };
+        updateAreaData(activeView, 'routine', [...routineTasks, newTask]);
+        setNewRoutineTask("");
+    };
+
+    const toggleRoutineTask = (taskId) => {
+        if (!isEditor) return;
+        const updatedTasks = routineTasks.map(task => 
+            task.id === taskId ? { ...task, completed: !task.completed } : task
+        );
+        updateAreaData(activeView, 'routine', updatedTasks);
+    };
+
+    const removeRoutineTask = (taskId) => {
+        if (!isEditor) return;
+        const updatedTasks = routineTasks.filter(task => task.id !== taskId);
+        updateAreaData(activeView, 'routine', updatedTasks);
     };
 
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
@@ -263,7 +294,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* SEZIONE KSM AGGIORNATA (DESIGN SEMPLIFICATO) */}
             <Card 
                 title="Key Success Metrics (KSM)" 
                 icon={Target} 
@@ -343,13 +373,64 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Attività di Routine (Day-by-Day)" icon={Clock}>
-                <AdvancedEditor 
-                    value={data.routine || ''} 
-                    onChange={(val) => updateAreaData(activeView, 'routine', val)} 
-                    placeholder="Quali sono le attività operative quotidiane?" 
-                    disabled={!isEditor} 
-                />
+            {/* NUOVA SEZIONE: Attività Chiave Day-by-Day (To-Do List) */}
+            <Card title="Attività Chiave Day-by-Day" icon={Clock}>
+                <div className="space-y-4">
+                    {/* Input Aggiunta Rapida */}
+                    {isEditor && (
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="text"
+                                value={newRoutineTask}
+                                onChange={(e) => setNewRoutineTask(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()}
+                                placeholder="Aggiungi una nuova attività chiave da svolgere regolarmente..."
+                                className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                            />
+                            <Button variant="secondary" onClick={handleAddRoutineTask} className="whitespace-nowrap flex items-center gap-2 h-full">
+                                <Plus size={16} /> Aggiungi
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Lista Attività */}
+                    {routineTasks.length === 0 ? (
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm italic">
+                            Nessuna attività day-by-day definita. Usa il campo qui sopra per aggiungerne una.
+                        </div>
+                    ) : (
+                        <div className="space-y-2 mt-4">
+                            {routineTasks.map((task) => (
+                                <div key={task.id} className="group flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-sm transition-all">
+                                    <div className="flex items-center gap-4 flex-grow cursor-pointer" onClick={() => toggleRoutineTask(task.id)}>
+                                        <button
+                                            disabled={!isEditor}
+                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                                task.completed
+                                                    ? 'bg-blue-500 border-blue-500 text-white'
+                                                    : 'border-gray-300 hover:border-blue-400 bg-white'
+                                            }`}
+                                        >
+                                            {task.completed && <Check size={12} strokeWidth={3} />}
+                                        </button>
+                                        <span className={`text-sm transition-all select-none ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
+                                            {task.text}
+                                        </span>
+                                    </div>
+                                    {isEditor && (
+                                        <button
+                                            onClick={() => removeRoutineTask(task.id)}
+                                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1 ml-4"
+                                            title="Elimina attività"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </Card>
 
             <NotebookLMChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} areaLabel={area.label} />
