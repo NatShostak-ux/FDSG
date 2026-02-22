@@ -25,9 +25,15 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
 
     const budgetRange = calculateTotalBudgetRange();
     
+    // Costruzione della lista completa dei progetti con i metadati dell'area per il Gantt
     const allProjects = EXPERTISE_AREAS.flatMap(area => {
-        const data = activeScenario.data[area.id];
-        return data?.projects?.map(p => ({ ...p, areaId: area.id })) || [];
+        const areaData = activeScenario.data[area.id];
+        return (areaData?.projects || []).map(p => ({ 
+            ...p, 
+            areaId: area.id,
+            areaColor: area.hex,
+            areaLabel: area.label
+        }));
     });
 
     const projectsByArea = EXPERTISE_AREAS.map(area => {
@@ -40,8 +46,51 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
 
     return (
         <div className="space-y-8 animate-fadeIn relative">
-            {/* ... Modal Index rimane uguale ... */}
-            
+            {/* Modal Index Progetti */}
+            {isProjectPreviewOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fadeIn" onClick={() => setIsProjectPreviewOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="bg-gray-50 px-6 py-4 flex justify-between items-center border-b border-gray-200">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2" style={{ color: ARAD_BLUE }}>
+                                    <List size={24} style={{ color: ARAD_GOLD }} /> Indice Progetti
+                                </h3>
+                            </div>
+                            <button onClick={() => setIsProjectPreviewOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto custom-scrollbar bg-slate-50">
+                            {projectsByArea.length === 0 ? (
+                                <div className="text-center py-12 text-gray-400">Nessun progetto pianificato.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {projectsByArea.map(({ area, projects }) => (
+                                        <div key={area.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                            <button onClick={() => { setActiveView(area.id); setIsProjectPreviewOpen(false); }} className="flex items-center gap-2 w-full mb-3 group">
+                                                <div className="p-2 rounded-lg text-white" style={{ backgroundColor: area.hex }}>
+                                                    <area.icon size={18} />
+                                                </div>
+                                                <span className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors flex-grow text-left">{area.label}</span>
+                                                <ChevronRight size={16} className="text-gray-300" />
+                                            </button>
+                                            <ul className="space-y-2">
+                                                {projects.map(p => (
+                                                    <li key={p.id} className="text-xs flex items-center gap-2 text-gray-600 pl-2 border-l-2 border-gray-100">
+                                                        <span className="truncate font-medium">{p.title || 'Senza titolo'}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
                     <div>
@@ -62,7 +111,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </div>
 
-            {/* ... Resto del componente (Radar, Gantt, KSM) rimane uguale ... */}
+            {/* Radar Chart */}
             <Card title="Analisi Pesi Strategici" icon={TrendingUp}>
                 <div className="flex flex-col md:flex-row gap-8 items-center">
                     <div className="flex-grow w-full max-w-lg">
@@ -86,12 +135,22 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </Card>
 
+            {/* Roadmap Strategica Integrata (Corretta) */}
             <Card title="Roadmap Strategica Integrata (2026-2029)" icon={Calendar} noPadding>
-                <div className="p-6">
-                    <GanttChart projects={allProjects} areas={EXPERTISE_AREAS} showSwimlanes={true} onUpdateProject={updateProjectBatch} />
+                <div className="p-4 bg-gray-50 border-b border-gray-100 text-sm text-gray-500">
+                    Visualizzazione consolidata per aree operative (drag per spostare, bordi per ridimensionare).
+                </div>
+                <div className="p-0 overflow-hidden rounded-b-xl">
+                    <GanttChart 
+                        projects={allProjects} 
+                        areas={EXPERTISE_AREAS} 
+                        showSwimlanes={true} 
+                        onUpdateProject={updateProjectBatch} 
+                    />
                 </div>
             </Card>
 
+            {/* Riepilogo KSM */}
             <Card title="Riepilogo Metriche di Successo (KSM)" icon={Target} noPadding>
                 <div className="p-6 bg-slate-50/50">
                     {!hasAnyMetrics ? (
@@ -108,7 +167,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
                                         {areaKSMs.map(ksm => (
-                                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-gray-300 hover:shadow-md">
+                                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-gray-300">
                                                 <div className="flex-grow">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-bold text-gray-900 text-sm">{ksm.name}</span>
