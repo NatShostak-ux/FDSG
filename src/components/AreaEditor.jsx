@@ -136,6 +136,53 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     return (
         <div className="space-y-6 animate-fadeIn relative">
+            
+            {/* RIPRISTINATO: Modal Note */}
+            {isNotesOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 print:hidden">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="bg-gray-100 px-6 py-4 flex justify-between items-center border-b border-gray-200">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                <StickyNote size={18} className="text-yellow-600" /> Note: {area.label}
+                            </h3>
+                            <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={20} /></button>
+                        </div>
+                        <div className="p-6">
+                            <AdvancedEditor
+                                value={data.comments || ''}
+                                onChange={(val) => updateAreaData(activeView, 'comments', val)}
+                                placeholder={`Inserisci note per ${area.label}...`}
+                                disabled={!isEditor}
+                            />
+                        </div>
+                        <div className="px-6 py-4 bg-gray-50 flex justify-end">
+                            <Button onClick={() => setIsNotesOpen(false)} variant="secondary">Chiudi</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isLegendOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadeIn print:hidden" onClick={() => setIsLegendOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                            <h3 className="font-bold text-gray-900 text-lg">Legenda Ruolo Strategico</h3>
+                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {STRATEGIC_ROLES.map(role => (
+                                <div key={role.id}>
+                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
+                                        <span className="text-xl">{role.icon}</span> {role.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{role.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 flex-grow">
@@ -146,10 +193,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <h2 className="text-2xl font-bold text-gray-900">{area.label}</h2>
                             <div className="flex items-center gap-3">
                                 <p className="text-gray-500 text-sm">Pianificazione operativa</p>
-                                <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200 transition-colors">
+                                <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border border-yellow-200 transition-colors print:hidden">
                                     <StickyNote size={12} /> Note
                                 </button>
-                                <button onClick={() => setIsChatOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors shadow-sm">
+                                <button onClick={() => setIsChatOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors shadow-sm print:hidden">
                                     <Sparkles size={12} /> AI Chat
                                 </button>
                             </div>
@@ -157,15 +204,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     </div>
                     
                     <div className="flex items-stretch gap-4 w-full md:w-auto relative">
-                        {/* Ruolo Strategico con Tooltip Popover */}
                         <div className="rounded-xl p-3 flex flex-col justify-center shadow-lg min-w-[190px] relative transition-colors" style={{ backgroundColor: '#0f172a' }}>
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: ARAD_GOLD }}>Ruolo Strategico</span>
-                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-gray-400 hover:text-white transition-colors" title="Vedi legenda">
+                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-gray-400 hover:text-white transition-colors print:hidden" title="Vedi legenda">
                                     <Info size={14} />
                                 </button>
                             </div>
-                            {/* Font ridotto per eleganza */}
                             <select
                                 value={currentRole.value}
                                 onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))}
@@ -180,13 +225,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 ))}
                             </select>
 
-                            {/* TOOLTIP POPOVER */}
                             {isLegendOpen && (
-                                <>
-                                    {/* Overlay invisibile per chiudere cliccando fuori */}
+                                <div className="print:hidden">
                                     <div className="fixed inset-0 z-40" onClick={() => setIsLegendOpen(false)}></div>
-                                    
-                                    {/* Box del Tooltip */}
                                     <div className="absolute top-[calc(100%+12px)] right-0 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden cursor-default animate-fadeIn">
                                         <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                                             <h3 className="font-bold text-gray-900 text-sm">Legenda Ruolo Strategico</h3>
@@ -205,7 +246,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             ))}
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </div>
                         
@@ -236,7 +277,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Pianificazione Gantt" icon={Calendar} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700">Aggiungi Progetto</Button>} noPadding>
+            <Card title="Pianificazione Gantt" icon={Calendar} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700 print:hidden">Aggiungi Progetto</Button>} noPadding>
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                     <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} activeAreaId={area.id} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
                 </div>
@@ -248,7 +289,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
                                     <span>Progetti</span><ChevronRight size={14} /><span style={{ color: area.hex }}>{selectedProject.title || 'Iniziativa senza nome'}</span>
                                 </div>
-                                {isEditor && <button onClick={() => removeProject(selectedProject.id)} className="text-xs text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>}
+                                {isEditor && <button onClick={() => removeProject(selectedProject.id)} className="text-xs text-gray-400 hover:text-red-600 transition-colors print:hidden"><Trash2 size={14} /></button>}
                             </div>
 
                             <div className="space-y-8">
@@ -297,11 +338,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abilitatori Chiave (Key Enablers)</label>
                                     <div className="space-y-3">
                                         {(selectedProject.enablers || [""]).map((enabler, index) => (
-                                            <div key={index} className="flex items-center gap-3 group">
+                                            <div key={index} className={`flex items-center gap-3 group ${(!enabler && index === (selectedProject.enablers?.length - 1)) ? 'print:hidden' : ''}`}>
                                                 <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex-shrink-0" />
                                                 <input type="text" value={enabler} placeholder={index === 0 ? "Aggiungi abilitatore..." : ""} className={`enabler-input-${selectedProject.id} flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm text-gray-700 placeholder-gray-300 font-medium`} onChange={(e) => { const newEnablers = [...(selectedProject.enablers || [""])]; newEnablers[index] = e.target.value; updateProject(activeView, selectedProject.id, 'enablers', newEnablers); }} onKeyDown={(e) => handleEnablerKeyDown(e, index, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} />
                                                 {isEditor && (
-                                                    <button onClick={() => { const newEnablers = selectedProject.enablers.filter((_, i) => i !== index); updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity">
+                                                    <button onClick={() => { const newEnablers = selectedProject.enablers.filter((_, i) => i !== index); updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity print:hidden">
                                                         <X size={16} />
                                                     </button>
                                                 )}
@@ -317,7 +358,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
+            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700 print:hidden">Aggiungi Metrica</Button>} noPadding>
                 <div className="p-6 space-y-6 bg-slate-50/50">
                     <p className="text-sm text-gray-600 mb-2">Definisci le metriche chiave per misurare il successo in quest'area <strong>(Consigliato: massimo 3 metriche)</strong>.</p>
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
@@ -325,7 +366,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     ) : (
                         data.ksms.map((ksm) => (
                             <div key={ksm.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
-                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={18} /></button>}
+                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600 p-1 transition-colors print:hidden"><Trash2 size={18} /></button>}
                                 <div className="pr-12">
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
                                     <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:ring-0 px-0 py-1 text-xl font-bold text-gray-800 bg-transparent transition-colors placeholder-gray-400" placeholder="Es. Tasso di Conversione" />
@@ -344,7 +385,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             <Card title="Attività Chiave Day-by-Day" icon={Clock}>
                 <div className="space-y-4">
                     {isEditor && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 print:hidden">
                             <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Aggiungi una nuova attività chiave da svolgere regolarmente..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none" />
                             <Button variant="secondary" onClick={handleAddRoutineTask} className="whitespace-nowrap flex items-center gap-2 h-full"><Plus size={16} /> Aggiungi</Button>
                         </div>
@@ -359,7 +400,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <button disabled={!isEditor} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 hover:border-blue-400 bg-white'}`}>{task.completed && <Check size={12} strokeWidth={3} />}</button>
                                         <span className={`text-sm transition-all select-none ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{task.text}</span>
                                     </div>
-                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1 ml-4" title="Elimina attività"><X size={16} /></button>}
+                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1 ml-4 print:hidden" title="Elimina attività"><X size={16} /></button>}
                                 </div>
                             ))}
                         </div>
@@ -367,7 +408,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <NotebookLMChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} areaLabel={area.label} />
+            {/* Chatbot nascosto in stampa */}
+            <div className="print:hidden">
+                <NotebookLMChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} areaLabel={area.label} />
+            </div>
         </div>
     );
 };
