@@ -7,7 +7,6 @@ import NotebookLMChat from './NotebookLMChat';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, GANTT_END_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
-// Configurazione dei ruoli strategici e dei loro pesi numerici per il Radar Chart
 export const STRATEGIC_ROLES = [
     { id: 'strategic', value: 10, label: 'Strategic', icon: '🔥', title: 'Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati (es. nuovo piano di Loyalty & Membership avanzato)." },
     { id: 'core', value: 8, label: 'Core', icon: '⭐', title: 'Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane. Se quest'area si ferma, l'azienda si ferma (es. la vendita e-commerce attuale, logistica di base)." },
@@ -137,29 +136,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     return (
         <div className="space-y-6 animate-fadeIn relative">
-            {/* Tooltip Modal: Legenda Ruolo Strategico */}
-            {isLegendOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadeIn" onClick={() => setIsLegendOpen(false)}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100">
-                            <h3 className="font-bold text-gray-900 text-lg">Legenda Ruolo Strategico</h3>
-                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors"><X size={20} /></button>
-                        </div>
-                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                            {STRATEGIC_ROLES.map(role => (
-                                <div key={role.id}>
-                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
-                                        <span className="text-xl">{role.icon}</span> {role.title}
-                                    </h4>
-                                    <p className="text-sm text-gray-600 leading-relaxed">{role.desc}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Header Area */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 flex-grow">
@@ -180,20 +156,21 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         </div>
                     </div>
                     
-                    <div className="flex items-stretch gap-4 w-full md:w-auto">
-                        {/* NUOVO COMPONENTE: Ruolo Strategico (Dropdown) */}
+                    <div className="flex items-stretch gap-4 w-full md:w-auto relative">
+                        {/* Ruolo Strategico con Tooltip Popover */}
                         <div className="rounded-xl p-3 flex flex-col justify-center shadow-lg min-w-[190px] relative transition-colors" style={{ backgroundColor: '#0f172a' }}>
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: ARAD_GOLD }}>Ruolo Strategico</span>
-                                <button onClick={() => setIsLegendOpen(true)} className="text-gray-400 hover:text-white transition-colors" title="Vedi legenda">
+                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-gray-400 hover:text-white transition-colors" title="Vedi legenda">
                                     <Info size={14} />
                                 </button>
                             </div>
+                            {/* Font ridotto per eleganza */}
                             <select
                                 value={currentRole.value}
                                 onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))}
                                 disabled={!isEditor}
-                                className="w-full appearance-none bg-transparent border-0 border-b-2 focus:ring-0 p-0 py-1 text-white font-bold text-xl cursor-pointer"
+                                className="w-full appearance-none bg-transparent border-0 border-b-2 focus:ring-0 p-0 py-1 text-white font-semibold text-[15px] cursor-pointer"
                                 style={{ borderColor: ARAD_GOLD }}
                             >
                                 {STRATEGIC_ROLES.map(role => (
@@ -202,6 +179,34 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     </option>
                                 ))}
                             </select>
+
+                            {/* TOOLTIP POPOVER */}
+                            {isLegendOpen && (
+                                <>
+                                    {/* Overlay invisibile per chiudere cliccando fuori */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsLegendOpen(false)}></div>
+                                    
+                                    {/* Box del Tooltip */}
+                                    <div className="absolute top-[calc(100%+12px)] right-0 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden cursor-default animate-fadeIn">
+                                        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                            <h3 className="font-bold text-gray-900 text-sm">Legenda Ruolo Strategico</h3>
+                                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700">
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                            {STRATEGIC_ROLES.map(role => (
+                                                <div key={role.id}>
+                                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-1.5 text-sm">
+                                                        <span className="text-lg">{role.icon}</span> {role.title}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-600 leading-relaxed">{role.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                         
                         <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-center min-w-[180px]">
