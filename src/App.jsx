@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, LogOut, Download, Table, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, LogOut, FileText } from 'lucide-react';
 import Button from './components/ui/Button';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -20,7 +20,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isEditor, setIsEditor] = useState(false);
 
-  // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -34,7 +33,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Firestore Sync
   useEffect(() => {
     if (!user) return;
     const docRef = doc(db, "strategy", "hub");
@@ -79,15 +77,8 @@ function App() {
   const persistScenarios = async (newScenarios) => {
     if (!isEditor) return;
     try {
-      localStorage.setItem('fdsg_backup', JSON.stringify({
-        timestamp: new Date().toISOString(),
-        scenarios: newScenarios
-      }));
-      await setDoc(doc(db, "strategy", "hub"), {
-        scenarios: newScenarios,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: user.email
-      });
+      localStorage.setItem('fdsg_backup', JSON.stringify({ timestamp: new Date().toISOString(), scenarios: newScenarios }));
+      await setDoc(doc(db, "strategy", "hub"), { scenarios: newScenarios, lastUpdated: new Date().toISOString(), updatedBy: user.email });
     } catch (e) {
       console.error("Persistence Error:", e);
     }
@@ -106,12 +97,7 @@ function App() {
     if (!isEditor) return;
     const newId = Date.now();
     setScenarios(prev => {
-      const updated = [...prev, {
-        id: newId,
-        title: 'Nuovo Scenario',
-        description: 'Descrizione dello scenario...',
-        data: {}
-      }];
+      const updated = [...prev, { id: newId, title: 'Nuovo Scenario', description: 'Descrizione dello scenario...', data: {} }];
       persistScenarios(updated);
       return updated;
     });
@@ -135,10 +121,7 @@ function App() {
       const scenario = prev.find(s => s.id === activeScenarioId);
       if (!scenario) return prev;
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
-      const updatedScenario = {
-        ...scenario,
-        data: { ...scenario.data, [areaId]: { ...areaData, [field]: value } }
-      };
+      const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, [field]: value } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
       persistScenarios(updated);
       return updated;
@@ -152,13 +135,8 @@ function App() {
       if (!scenario) return prev;
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
       const currentProjects = Array.isArray(areaData.projects) ? areaData.projects : [];
-      const updatedProjects = currentProjects.map(p =>
-        p.id === projectId ? { ...p, [field]: value } : p
-      );
-      const updatedScenario = {
-        ...scenario,
-        data: { ...scenario.data, [areaId]: { ...areaData, projects: updatedProjects } }
-      };
+      const updatedProjects = currentProjects.map(p => p.id === projectId ? { ...p, [field]: value } : p);
+      const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, projects: updatedProjects } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
       persistScenarios(updated);
       return updated;
@@ -170,28 +148,17 @@ function App() {
     setScenarios(prev => {
       const scenario = prev.find(s => s.id === activeScenarioId);
       if (!scenario) return prev;
-      
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
       const currentProjects = Array.isArray(areaData.projects) ? areaData.projects : [];
-      
       let finalProjects;
-      // Caso 1: Arriva un array intero (Salvataggio massivo)
       if (Array.isArray(projectIdOrArray)) {
         finalProjects = projectIdOrArray;
-      } 
-      // Caso 2: Arriva ID + date (Trascinamento Gantt)
-      else if (projectIdOrArray && updatedDates) {
-        finalProjects = currentProjects.map(p => 
-          p.id === projectIdOrArray ? { ...p, ...updatedDates } : p
-        );
+      } else if (projectIdOrArray && updatedDates) {
+        finalProjects = currentProjects.map(p => p.id === projectIdOrArray ? { ...p, ...updatedDates } : p);
       } else {
         return prev;
       }
-
-      const updatedScenario = {
-        ...scenario,
-        data: { ...scenario.data, [areaId]: { ...areaData, projects: finalProjects } }
-      };
+      const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, projects: finalProjects } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
       persistScenarios(updated);
       return updated;
@@ -205,48 +172,30 @@ function App() {
       if (!scenario) return prev;
       const areaData = scenario.data[areaId] || { ...EMPTY_AREA_DATA };
       const currentKSMs = Array.isArray(areaData.ksms) ? areaData.ksms : [];
-      const updatedKSMs = currentKSMs.map(k =>
-        k.id === ksmId ? { ...k, [field]: value } : k
-      );
-      const updatedScenario = {
-        ...scenario,
-        data: { ...scenario.data, [areaId]: { ...areaData, ksms: updatedKSMs } }
-      };
+      const updatedKSMs = currentKSMs.map(k => k.id === ksmId ? { ...k, [field]: value } : k);
+      const updatedScenario = { ...scenario, data: { ...scenario.data, [areaId]: { ...areaData, ksms: updatedKSMs } } };
       const updated = prev.map(s => s.id === activeScenarioId ? updatedScenario : s);
       persistScenarios(updated);
       return updated;
     });
   };
 
-  const handleRestoreDefaults = async () => {
-    if (!isEditor) return;
-    if (window.confirm("Attenzione: questo sovrascriverà tutti i dati. Procedere?")) {
-      await persistScenarios(INITIAL_SCENARIOS);
-      alert("Inizializzazione completata!");
-    }
-  };
-
-  const handleExportCSV = () => {
-    const rows = [['Scenario', 'Area', 'Importance', 'Budget', 'Objectives', 'Projects', 'KSMs']];
-    scenarios.forEach(s => {
-      EXPERTISE_AREAS.forEach(area => {
-        const areaData = s.data[area.id] || { ...EMPTY_AREA_DATA };
-        const projectTitles = (areaData.projects || []).map(p => p.title).join('; ');
-        const ksmNames = (areaData.ksms || []).map(k => k.name).join('; ');
-        rows.push([s.title, area.label, areaData.importance, areaData.budget, (areaData.objectives || '').replace(/"/g, '""'), projectTitles.replace(/"/g, '""'), ksmNames.replace(/"/g, '""')]);
-      });
-    });
-    const csvContent = rows.map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `fdsg_export_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      
+      {/* INIEZIONE CSS PER STAMPA PERFETTA PDF */}
+      <style>{`
+        @media print {
+          aside, header, .print\\:hidden { display: none !important; }
+          main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+          .custom-scrollbar, textarea, .ql-container, .ql-editor { height: auto !important; max-height: none !important; overflow: visible !important; white-space: pre-wrap !important; }
+          .ql-toolbar { display: none !important; }
+          .shadow-sm, .shadow-lg, .shadow-2xl { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+          .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `}</style>
+
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 print:hidden">
         <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -262,15 +211,22 @@ function App() {
               <span className="text-sm font-bold text-gray-900 leading-tight">{user.email}</span>
               <span className={`text-xs font-bold uppercase ${isEditor ? 'text-blue-600' : 'text-gray-400'}`}>{isEditor ? 'Editor' : 'Viewer'}</span>
             </div>
-            <button onClick={handleExportCSV} className="p-2 text-gray-400 hover:text-green-600 rounded-lg"><Table size={20} /></button>
-            <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg"><LogOut size={18} /><span>Esci</span></button>
+            
+            {/* NUOVO BOTTONE SALVATAGGIO PDF */}
+            <button onClick={() => window.print()} className="p-2 text-gray-400 hover:text-red-600 rounded-lg transition-colors" title="Salva Scenario in PDF">
+              <FileText size={22} />
+            </button>
+            
+            <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg">
+              <LogOut size={18} /><span>Esci</span>
+            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-[1400px] mx-auto px-4 py-8">
         {scenarios.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8 print:hidden">
             <div className="flex items-center gap-2 overflow-x-auto pb-4">
               {scenarios.map(scenario => (
                 <button
