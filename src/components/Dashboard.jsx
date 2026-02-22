@@ -6,7 +6,6 @@ import GanttChart from './GanttChart';
 import RadarChart from './RadarChart';
 import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
-// Importiamo la logica e le icone dal file gemello
 import { STRATEGIC_ROLES, getStrategicRole } from './AreaEditor';
 
 const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
@@ -112,9 +111,9 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                         <RadarChart data={activeScenario.data} areas={EXPERTISE_AREAS} />
                     </div>
                     
-                    {/* Valori Puntuali Aggiornati con i nuovi Ruoli Strategici */}
-                    <div className="flex-shrink-0 w-full md:w-64 space-y-3 text-sm text-gray-600 max-h-80 overflow-y-auto pr-2">
-                        <h4 className="font-bold text-gray-800 mb-3 uppercase text-xs">Valori Puntuali</h4>
+                    {/* Valori Puntuali: Rimosso scroll e max-height per mostrare tutto */}
+                    <div className="flex-shrink-0 w-full md:w-72 space-y-2.5 text-sm text-gray-600 pr-2">
+                        <h4 className="font-bold text-gray-800 mb-3 uppercase text-[11px] tracking-wider">Valori Puntuali</h4>
                         {EXPERTISE_AREAS.map(area => {
                             const score = activeScenario.data[area.id]?.importance || 0;
                             const role = getStrategicRole(score);
@@ -124,7 +123,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: area.hex }}></div>
                                         {area.label}
                                     </span>
-                                    <span className="font-bold flex items-center gap-1 text-xs">
+                                    <span className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider">
                                         <span>{role.icon}</span> 
                                         <span style={{ color: area.hex }}>{role.label}</span>
                                     </span>
