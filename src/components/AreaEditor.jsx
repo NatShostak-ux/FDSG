@@ -183,12 +183,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Definisci gli obiettivi...`} disabled={!isEditor} />
             </Card>
 
-            <Card title="Evoluzione Temporale (Roadmap 3 Anni)" icon={Calendar}>
+            {/* SEZIONE RINOMINATA E ALLINEATA */}
+            <Card title="Descrizione Qualitativa del Phasing" icon={Calendar}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
-                        <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col h-full">
-                            <div className="text-xs font-bold text-gray-500 uppercase mb-2 text-[10px] tracking-wider">Anno {year}</div>
-                            <div className="relative flex-grow h-full bg-white rounded border border-gray-100">
+                        <div key={year} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Anno {year}</div>
+                            {/* Le classi aggiunte qui forzano il box dell'editor a espandersi fino in fondo! */}
+                            <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden [&>div]:flex-grow [&>div]:flex [&>div]:flex-col">
                                 <AdvancedEditor value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
                             </div>
                         </div>
