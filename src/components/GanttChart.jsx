@@ -59,11 +59,14 @@ const GanttChart = ({
 
     const handleMouseMove = (e) => {
         if (!draggedProject) return;
+        
         const deltaX = e.clientX - draggedProject.startX;
+        
         if (draggedProject.mode === 'move') {
             const newLeft = Math.max(0, Math.min(totalWidth - draggedProject.currentWidth, draggedProject.originalLeft + deltaX));
             setDraggedProject(prev => ({ ...prev, currentLeft: newLeft }));
         } else if (draggedProject.mode === 'resize-right') {
+            // Logica ripristinata per il ridimensionamento della lunghezza
             const newWidth = Math.max(monthWidth, draggedProject.originalWidth + deltaX);
             setDraggedProject(prev => ({ ...prev, currentWidth: newWidth }));
         }
@@ -73,7 +76,18 @@ const GanttChart = ({
         if (draggedProject && onUpdateProject) {
             let newStartDate = pixelToDate(draggedProject.currentLeft);
             let newEndDate = pixelToDate(draggedProject.currentLeft + draggedProject.currentWidth);
-            onUpdateProject(draggedProject.areaId, draggedProject.id, { start: newStartDate, end: newEndDate });
+            
+            // Evitiamo che la data di fine sia uguale o precedente a quella di inizio
+            if (newStartDate >= newEndDate) {
+                const d = new Date(newStartDate + "-01");
+                d.setMonth(d.getMonth() + 1);
+                newEndDate = d.toISOString().slice(0, 7);
+            }
+
+            onUpdateProject(draggedProject.areaId, draggedProject.id, { 
+                start: newStartDate, 
+                end: newEndDate 
+            });
         }
         setDraggedProject(null);
     };
@@ -89,14 +103,13 @@ const GanttChart = ({
         };
     }, [draggedProject]);
 
-    // Funzione di rendering della barra con supporto al ROW INDEX per lo stacking
     const renderProjectBar = (p, areaColor, rowIndex = 0) => {
         const isSelected = selectedProjectId === p.id;
         const isDragging = draggedProject?.id === p.id;
+        
         const left = isDragging ? draggedProject.currentLeft : dateToPixel(p.start);
         const width = isDragging ? draggedProject.currentWidth : Math.max(monthWidth, dateToPixel(p.end) - dateToPixel(p.start));
         
-        // Calcolo altezza dinamica (ogni riga extra aggiunge 32px)
         const topOffset = 8 + (rowIndex * 32);
 
         return (
@@ -107,24 +120,32 @@ const GanttChart = ({
                     if (onSelectProject) onSelectProject(p.id);
                 }}
                 className={`absolute h-6 rounded-md flex items-center px-2 text-white text-[10px] cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-offset-1 ring-blue-500 shadow-lg z-30' : 'opacity-80 hover:opacity-100 z-10'
+                    isSelected ? 'ring-2 ring-blue-500 shadow-lg z-30' : 'opacity-80 hover:opacity-100 z-10'
                 }`}
                 style={{
                     left: `${left}px`,
                     width: `${width}px`,
                     top: `${topOffset}px`,
                     backgroundColor: areaColor,
-                    border: isSelected ? '1px solid white' : 'none'
+                    border: isSelected ? '1px solid white' : 'none',
+                    transition: isDragging ? 'none' : 'all 0.2s' // Disabilita transizioni durante il drag per fluidità
                 }}
             >
                 <span className="truncate font-bold pointer-events-none">{p.title || 'Nuovo Progetto'}</span>
-                {isEditor && isSelected && (
+                
+                {/* Zona sensibile per il ridimensionamento (bordo destro) */}
+                {isEditor && (
                     <div 
-                        className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize hover:bg-white/30 rounded-r-md" 
+                        className="absolute right-0 top-0 bottom-0 w-3 cursor-e-resize z-40" 
                         onMouseDown={(e) => handleMouseDown(e, p, 'resize-right')}
                     ></div>
                 )}
-                <div className="absolute inset-0 z-0" onMouseDown={(e) => handleMouseDown(e, p, 'move')}></div>
+                
+                {/* Zona sensibile per lo spostamento (corpo della barra) */}
+                <div 
+                    className="absolute inset-0 z-0" 
+                    onMouseDown={(e) => handleMouseDown(e, p, 'move')}
+                ></div>
             </div>
         );
     };
@@ -135,9 +156,9 @@ const GanttChart = ({
     return (
         <div className="w-full overflow-x-auto border border-gray-200 rounded-lg bg-white" ref={containerRef}>
             <div style={{ width: `${totalWidth + 200}px` }} className="relative">
-                {/* Header Anni/Mesi */}
+                {/* Header Timeline */}
                 <div className="flex bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
-                    <div className="w-48 flex-shrink-0 p-3 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-200 sticky left-0 bg-gray-50 z-30">
+                    <div className="w-48 flex-shrink-0 p-3 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-200 sticky left-0 bg-gray-50 z-30 text-center">
                         {showSwimlanes ? 'Area' : 'Iniziativa'}
                     </div>
                     <div className="flex">
@@ -157,19 +178,18 @@ const GanttChart = ({
                 {/* Righe Progetti */}
                 <div className="relative min-h-[200px]">
                     {showSwimlanes ? (
-                        // MODO DASHBOARD: Corsie per Area
                         areas.map(area => {
                             const areaProjects = projects.filter(p => p.areaId === area.id);
                             const rowHeight = Math.max(44, (areaProjects.length * 32) + 16);
 
                             return (
-                                <div key={area.id} className="border-b border-gray-100 relative z-10 transition-colors">
+                                <div key={area.id} className="border-b border-gray-100 relative z-10">
                                     <div className="flex" style={{ minHeight: `${rowHeight}px` }}>
                                         <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 px-3 py-3 flex items-start gap-2 sticky left-0 z-20 h-full">
                                             <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: area.hex }}></div>
                                             <span className="text-[10px] font-bold text-gray-700 uppercase leading-tight">{area.label}</span>
                                         </div>
-                                        <div className="flex-grow relative w-full h-full">
+                                        <div className="flex-grow relative h-full">
                                             {areaProjects.map((p, idx) => renderProjectBar(p, area.hex, idx))}
                                         </div>
                                     </div>
@@ -177,14 +197,12 @@ const GanttChart = ({
                             );
                         })
                     ) : (
-                        // MODO AREA EDITOR: Una riga per progetto
                         projects.map(p => {
                             const currentArea = areas.find(a => a.id === activeAreaId);
                             const barColor = currentArea ? currentArea.hex : '#ccc';
                             return (
                                 <div 
                                     key={p.id} 
-                                    onClick={() => onSelectProject && onSelectProject(p.id)}
                                     className={`flex items-center h-10 border-b border-gray-50 group transition-colors ${selectedProjectId === p.id ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}
                                 >
                                     <div className={`w-48 flex-shrink-0 px-3 truncate text-xs font-medium sticky left-0 z-20 transition-all ${
