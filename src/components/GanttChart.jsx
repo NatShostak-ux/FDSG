@@ -1,7 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Flame, ArrowUpCircle, Circle } from 'lucide-react';
 
-const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = null, onUpdateProject, isEditor = false, selectedProjectId, onSelectProject }) => {
+const GanttChart = ({ 
+    projects, 
+    areas, 
+    showSwimlanes = false, 
+    activeAreaId = null, 
+    onUpdateProject, 
+    isEditor = false, 
+    selectedProjectId, 
+    onSelectProject 
+}) => {
     const containerRef = useRef(null);
     const [draggedProject, setDraggedProject] = useState(null);
 
@@ -29,8 +38,7 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
 
     const handleMouseDown = (e, project, mode = 'move') => {
         if (!isEditor) return;
-        // Seleziona il progetto appena si clicca
-        onSelectProject(project.id);
+        if (onSelectProject) onSelectProject(project.id);
         
         e.preventDefault();
         e.stopPropagation();
@@ -81,22 +89,30 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
         };
     }, [draggedProject]);
 
-    const renderProjectBar = (p, areaColor) => {
+    // Funzione di rendering della barra con supporto al ROW INDEX per lo stacking
+    const renderProjectBar = (p, areaColor, rowIndex = 0) => {
         const isSelected = selectedProjectId === p.id;
         const isDragging = draggedProject?.id === p.id;
         const left = isDragging ? draggedProject.currentLeft : dateToPixel(p.start);
         const width = isDragging ? draggedProject.currentWidth : Math.max(monthWidth, dateToPixel(p.end) - dateToPixel(p.start));
+        
+        // Calcolo altezza dinamica (ogni riga extra aggiunge 32px)
+        const topOffset = 8 + (rowIndex * 32);
 
         return (
             <div
                 key={p.id}
-                onClick={() => onSelectProject(p.id)}
-                className={`absolute top-2 h-6 rounded-md flex items-center px-2 text-white text-[10px] cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-offset-1 ring-blue-500 shadow-lg scale-[1.02] z-30' : 'opacity-80 hover:opacity-100 z-10'
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (onSelectProject) onSelectProject(p.id);
+                }}
+                className={`absolute h-6 rounded-md flex items-center px-2 text-white text-[10px] cursor-pointer transition-all ${
+                    isSelected ? 'ring-2 ring-offset-1 ring-blue-500 shadow-lg z-30' : 'opacity-80 hover:opacity-100 z-10'
                 }`}
                 style={{
                     left: `${left}px`,
                     width: `${width}px`,
+                    top: `${topOffset}px`,
                     backgroundColor: areaColor,
                     border: isSelected ? '1px solid white' : 'none'
                 }}
@@ -121,14 +137,16 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
             <div style={{ width: `${totalWidth + 200}px` }} className="relative">
                 {/* Header Anni/Mesi */}
                 <div className="flex bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
-                    <div className="w-48 flex-shrink-0 p-3 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-200 sticky left-0 bg-gray-50 z-30">Iniziativa</div>
+                    <div className="w-48 flex-shrink-0 p-3 text-[10px] font-bold text-gray-400 uppercase border-r border-gray-200 sticky left-0 bg-gray-50 z-30">
+                        {showSwimlanes ? 'Area' : 'Iniziativa'}
+                    </div>
                     <div className="flex">
                         {years.map(y => (
                             <div key={y} className="border-r border-gray-200">
                                 <div className="text-center py-1 text-[10px] font-bold text-gray-500 bg-gray-100 border-b border-gray-200">{y}</div>
                                 <div className="flex">
                                     {months.map((m, i) => (
-                                        <div key={i} className="w-[30px] text-center text-[8px] py-1 text-gray-400">{m}</div>
+                                        <div key={i} className="w-[30px] text-center text-[8px] py-1 text-gray-400 border-r border-gray-50 last:border-0">{m}</div>
                                     ))}
                                 </div>
                             </div>
@@ -137,23 +155,50 @@ const GanttChart = ({ projects, areas, showSwimlanes = false, activeAreaId = nul
                 </div>
 
                 {/* Righe Progetti */}
-                <div className="relative min-h-[150px]">
-                    {projects.map(p => (
-                        <div 
-                            key={p.id} 
-                            onClick={() => onSelectProject(p.id)}
-                            className={`flex items-center h-10 border-b border-gray-50 group transition-colors ${selectedProjectId === p.id ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}
-                        >
-                            <div className={`w-48 flex-shrink-0 px-3 truncate text-xs font-medium sticky left-0 z-20 transition-all ${
-                                selectedProjectId === p.id ? 'text-blue-600 font-bold bg-blue-50' : 'text-gray-600 bg-white'
-                            } border-r border-gray-100 h-full flex items-center`}>
-                                {p.title || 'Nuovo Progetto'}
-                            </div>
-                            <div className="flex-grow relative h-full">
-                                {renderProjectBar(p, areas.find(a => a.id === activeAreaId)?.hex || '#ccc')}
-                            </div>
-                        </div>
-                    ))}
+                <div className="relative min-h-[200px]">
+                    {showSwimlanes ? (
+                        // MODO DASHBOARD: Corsie per Area
+                        areas.map(area => {
+                            const areaProjects = projects.filter(p => p.areaId === area.id);
+                            const rowHeight = Math.max(44, (areaProjects.length * 32) + 16);
+
+                            return (
+                                <div key={area.id} className="border-b border-gray-100 relative z-10 transition-colors">
+                                    <div className="flex" style={{ minHeight: `${rowHeight}px` }}>
+                                        <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 px-3 py-3 flex items-start gap-2 sticky left-0 z-20 h-full">
+                                            <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: area.hex }}></div>
+                                            <span className="text-[10px] font-bold text-gray-700 uppercase leading-tight">{area.label}</span>
+                                        </div>
+                                        <div className="flex-grow relative w-full h-full">
+                                            {areaProjects.map((p, idx) => renderProjectBar(p, area.hex, idx))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        // MODO AREA EDITOR: Una riga per progetto
+                        projects.map(p => {
+                            const currentArea = areas.find(a => a.id === activeAreaId);
+                            const barColor = currentArea ? currentArea.hex : '#ccc';
+                            return (
+                                <div 
+                                    key={p.id} 
+                                    onClick={() => onSelectProject && onSelectProject(p.id)}
+                                    className={`flex items-center h-10 border-b border-gray-50 group transition-colors ${selectedProjectId === p.id ? 'bg-blue-50/30' : 'hover:bg-gray-50'}`}
+                                >
+                                    <div className={`w-48 flex-shrink-0 px-3 truncate text-xs font-medium sticky left-0 z-20 transition-all ${
+                                        selectedProjectId === p.id ? 'text-blue-600 font-bold bg-blue-50' : 'text-gray-600 bg-white'
+                                    } border-r border-gray-100 h-full flex items-center`}>
+                                        {p.title || 'Nuovo Progetto'}
+                                    </div>
+                                    <div className="flex-grow relative h-full">
+                                        {renderProjectBar(p, barColor, 0)}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>
