@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X, Sparkles, ChevronRight } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Sparkles, ChevronRight } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
@@ -78,16 +78,15 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     };
 
+    // FUNZIONE AGGIORNATA PER LE NUOVE KSM
     const addKSM = () => {
         if (!isEditor) return;
         const newKSM = {
             id: Date.now(),
             name: '',
-            abbr: '',
-            formula: '',
-            description: '',
-            guardRail: '',
-            alertLevel: ''
+            valueAsIs: '',
+            targetValue: '',
+            description: ''
         };
         const currentKSMs = Array.isArray(data.ksms) ? data.ksms : [];
         updateAreaData(activeView, 'ksms', [...currentKSMs, newKSM]);
@@ -103,7 +102,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     return (
         <div className="space-y-6 animate-fadeIn relative">
-            {/* Header Area */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 flex-grow">
@@ -142,7 +140,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </div>
 
-            {/* RIPRISTINATO: Obiettivi Macro */}
             <Card title="Obiettivi Macro" icon={Target}>
                 <AdvancedEditor 
                     value={data.objectives || ''} 
@@ -152,8 +149,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 />
             </Card>
 
-            {/* RIPRISTINATO: Evoluzione Temporale (3 Anni) */}
-            <Card title="Descrizione qualitativa del phasing (Roadmap 3 Anni)" icon={Calendar}>
+            <Card title="Evoluzione Temporale (Roadmap 3 Anni)" icon={Calendar}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
                         <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col h-full">
@@ -171,7 +167,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* Gantt e Dettaglio Progetto */}
             <Card title="Pianificazione Gantt" icon={Calendar} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700">Aggiungi Progetto</Button>} noPadding>
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                     <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} activeAreaId={area.id} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
@@ -180,7 +175,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="p-6 bg-white min-h-[300px]">
                     {selectedProject ? (
                         <div className="animate-fadeIn">
-                            {/* Toolbar Iniziativa */}
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium">
                                     <span>Progetti</span><ChevronRight size={14} /><span style={{ color: area.hex }}>{selectedProject.title || 'Iniziativa senza nome'}</span>
@@ -191,7 +185,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <div className="space-y-8">
                                 <input type="text" placeholder="Nome del progetto..." className="w-full text-2xl font-bold text-gray-800 border-0 border-b border-gray-100 focus:ring-0 px-0 pb-2" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} />
 
-                                {/* Dettagli Tecnici su Riga Unica */}
                                 <div className="flex flex-wrap items-end gap-6 pb-8 border-b border-gray-50">
                                     <div className="space-y-2 flex-grow min-w-[320px]">
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tempistiche</label>
@@ -226,13 +219,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     </div>
                                 </div>
 
-                                {/* Descrizione Iniziativa */}
                                 <div className="space-y-4">
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrizione Iniziativa</label>
                                     <AdvancedEditor value={selectedProject.description || ''} onChange={(val) => updateProject(activeView, selectedProject.id, 'description', val)} placeholder="Descrivi i dettagli, gli obiettivi e i task..." disabled={!isEditor} />
                                 </div>
 
-                                {/* Key Enablers */}
                                 <div className="space-y-4 pt-6">
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abilitatori Chiave (Key Enablers)</label>
                                     <div className="space-y-3">
@@ -272,49 +263,79 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* RIPRISTINATO: Key Success Metrics (KSM) */}
+            {/* SEZIONE KSM AGGIORNATA (DESIGN SEMPLIFICATO) */}
             <Card 
                 title="Key Success Metrics (KSM)" 
                 icon={Target} 
                 action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} 
                 noPadding
             >
-                <div className="p-6 space-y-4 bg-slate-50/50">
+                <div className="p-6 space-y-6 bg-slate-50/50">
+                    <p className="text-sm text-gray-600 mb-2">
+                        Definisci le metriche chiave per misurare il successo in quest'area <strong>(Consigliato: massimo 3 metriche)</strong>.
+                    </p>
+
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
-                        <div className="text-center text-gray-400 italic text-sm py-4">Nessuna metrica definita.</div>
+                        <div className="text-center text-gray-400 italic text-sm py-8">
+                            Nessuna metrica definita. Aggiungine una per monitorare il successo.
+                        </div>
                     ) : (
                         data.ksms.map((ksm) => (
-                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative group">
-                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-2 right-2 text-gray-300 hover:text-red-600 p-1"><Trash2 size={16} /></button>}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
+                                {isEditor && (
+                                    <button 
+                                        onClick={() => removeKSM(ksm.id)} 
+                                        className="absolute top-6 right-6 text-gray-300 hover:text-red-600 p-1 transition-colors"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                                
+                                <div className="pr-12">
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
+                                    <input 
+                                        type="text" 
+                                        value={ksm.name || ''} 
+                                        onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} 
+                                        disabled={!isEditor} 
+                                        className="w-full border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:ring-0 px-0 py-1 text-xl font-bold text-gray-800 bg-transparent transition-colors placeholder-gray-400" 
+                                        placeholder="Es. Tasso di Conversione" 
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Denominazione Metrica</label>
-                                        <input type="text" value={ksm.name} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-gray-200 rounded text-sm font-semibold" placeholder="Es. Tasso di Conversione" />
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label>
+                                        <input 
+                                            type="text" 
+                                            value={ksm.valueAsIs || ''} 
+                                            onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} 
+                                            disabled={!isEditor} 
+                                            className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" 
+                                            placeholder="Es. 1.2% (lascia vuoto se non disponibile)" 
+                                        />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Abbr.</label>
-                                            <input type="text" value={ksm.abbr} onChange={(e) => updateKSM(activeView, ksm.id, 'abbr', e.target.value)} disabled={!isEditor} className="w-full border-gray-200 rounded text-sm" placeholder="Es. CR" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Formula</label>
-                                            <input type="text" value={ksm.formula} onChange={(e) => updateKSM(activeView, ksm.id, 'formula', e.target.value)} disabled={!isEditor} className="w-full border-gray-200 rounded text-[10px] font-mono bg-gray-50" placeholder="Es. Ordini / Visite" />
-                                        </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label>
+                                        <input 
+                                            type="text" 
+                                            value={ksm.targetValue || ''} 
+                                            onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} 
+                                            disabled={!isEditor} 
+                                            className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" 
+                                            placeholder="Es. > 2.5%" 
+                                        />
                                     </div>
                                 </div>
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrizione</label>
-                                    <AdvancedEditor value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} placeholder="Scopo della metrica..." disabled={!isEditor} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex items-center gap-2 bg-green-50 p-2 rounded border border-green-100">
-                                        <ShieldAlert size={14} className="text-green-600" />
-                                        <input type="text" value={ksm.guardRail} onChange={(e) => updateKSM(activeView, ksm.id, 'guardRail', e.target.value)} disabled={!isEditor} className="w-full bg-transparent border-0 p-0 text-xs text-green-700 font-medium focus:ring-0" placeholder="Guard Rail (Sicurezza)" />
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-red-50 p-2 rounded border border-red-100">
-                                        <AlertTriangle size={14} className="text-red-600" />
-                                        <input type="text" value={ksm.alertLevel} onChange={(e) => updateKSM(activeView, ksm.id, 'alertLevel', e.target.value)} disabled={!isEditor} className="w-full bg-transparent border-0 p-0 text-xs text-red-700 font-medium focus:ring-0" placeholder="Alert Level (Critico)" />
-                                    </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
+                                    <AdvancedEditor 
+                                        value={ksm.description || ''} 
+                                        onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} 
+                                        placeholder="Descrivi lo scopo della metrica..." 
+                                        disabled={!isEditor} 
+                                    />
                                 </div>
                             </div>
                         ))
@@ -322,7 +343,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            {/* RIPRISTINATO: Attività di Routine */}
             <Card title="Attività di Routine (Day-by-Day)" icon={Clock}>
                 <AdvancedEditor 
                     value={data.routine || ''} 
