@@ -153,7 +153,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </Card>
 
             {/* RIPRISTINATO: Evoluzione Temporale (3 Anni) */}
-            <Card title="Evoluzione Temporale (Roadmap 3 Anni)" icon={Calendar}>
+            <Card title="Descrizione qualitativa del phasing (Roadmap 3 Anni)" icon={Calendar}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
                         <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col h-full">
