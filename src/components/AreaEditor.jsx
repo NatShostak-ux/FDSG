@@ -16,7 +16,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
     
-    // Protezione contro dati corrotti
     const safeProjects = Array.isArray(data.projects) ? data.projects : [];
     const areaProjects = safeProjects.map(p => ({ ...p, areaId: area.id }));
 
@@ -25,6 +24,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         const newProject = {
             id: Date.now(),
             title: '',
+            description: '', // Nuova field per descrizione iniziativa
             start: `${GANTT_START_YEAR}-01`,
             end: `${GANTT_START_YEAR}-04`,
             impact: 5,
@@ -263,6 +263,21 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                 className={`w-12 h-8 text-center border-gray-200 rounded text-sm text-gray-600 ${!isEditor ? 'cursor-not-allowed opacity-50' : ''}`}
                                             />
                                         </div>
+                                    </div>
+                                </div>
+                                
+                                {/* NUOVO BLOCCO DESCRIZIONE INIZIATIVA */}
+                                <div className="mt-2 pt-4 border-t border-gray-100">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">
+                                        Descrizione Iniziativa
+                                    </label>
+                                    <div className="relative">
+                                        <AdvancedEditor
+                                            value={project.description || ''}
+                                            onChange={(val) => updateProject(activeView, project.id, 'description', val)}
+                                            placeholder="Descrivi i dettagli, gli obiettivi e i task principali di questa iniziativa..."
+                                            disabled={!isEditor}
+                                        />
                                     </div>
                                 </div>
                             </div>
