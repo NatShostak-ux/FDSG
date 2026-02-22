@@ -8,9 +8,9 @@ import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, GANTT_END_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
 export const STRATEGIC_ROLES = [
-    { id: 'strategic', value: 10, label: 'Strategic', icon: '🔥', title: 'Strategic (Transformational)', desc: " Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
+    { id: 'strategic', value: 10, label: 'Strategic', icon: '🔥', title: 'Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
     { id: 'core', value: 8, label: 'Core', icon: '⭐', title: 'Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane. Se quest'area si ferma, l'azienda si ferma." },
-    { id: 'enabling', value: 6, label: 'Enabling', icon: '🏗️', title: 'Enabling (Foundational / Strutturale)', desc: "Sono le "fondamenta". Non generano valore diretto percepito dal cliente finale, ma sono i prerequisiti affinché le aree Core e Strategic possano esistere." },
+    { id: 'enabling', value: 6, label: 'Enabling', icon: '🏗️', title: 'Enabling (Foundational / Strutturale)', desc: 'Sono le "fondamenta". Non generano valore diretto percepito dal cliente finale, ma sono i prerequisiti affinché le aree Core e Strategic possano esistere.' },
     { id: 'supporting', value: 4, label: 'Supporting', icon: '⚙️', title: 'Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale, ma che non differenziano il brand sul mercato. Vanno ottimizzate e, dove possibile, automatizzate." },
     { id: 'exploratory', value: 2, label: 'Exploratory', icon: '🧪', title: 'Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale, che servono a testare nuove acque con budget limitati." }
 ];
