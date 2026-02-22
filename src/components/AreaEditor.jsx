@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X, Sparkles, ChevronRight, Check } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, ShieldAlert, AlertTriangle, X, Sparkles, ChevronRight, Check, Info } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
@@ -7,12 +7,29 @@ import NotebookLMChat from './NotebookLMChat';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, GANTT_END_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
+// Configurazione dei ruoli strategici e dei loro pesi numerici per il Radar Chart
+export const STRATEGIC_ROLES = [
+    { id: 'strategic', value: 10, label: 'Strategic', icon: '🔥', title: 'Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati (es. nuovo piano di Loyalty & Membership avanzato)." },
+    { id: 'core', value: 8, label: 'Core', icon: '⭐', title: 'Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane. Se quest'area si ferma, l'azienda si ferma (es. la vendita e-commerce attuale, logistica di base)." },
+    { id: 'enabling', value: 6, label: 'Enabling', icon: '🏗️', title: 'Enabling (Foundational / Strutturale)', desc: "Sono le \"fondamenta\". Non generano valore diretto percepito dal cliente finale, ma sono i prerequisiti affinché le aree Core e Strategic possano esistere (es. la migrazione a un nuovo CRM, l'infrastruttura dati, la sicurezza informatica)." },
+    { id: 'supporting', value: 4, label: 'Supporting', icon: '⚙️', title: 'Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale, ma che non differenziano il brand sul mercato. Vanno ottimizzate e, dove possibile, automatizzate (es. tool di back-office, processi HR base)." },
+    { id: 'exploratory', value: 2, label: 'Exploratory', icon: '🧪', title: 'Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale, che servono a testare nuove acque con budget limitati (es. testare l'AI per i consigli sui vini, esplorare il Web3 o canali social totalmente nuovi)." }
+];
+
+export const getStrategicRole = (val) => {
+    const num = Number(val) || 0;
+    if (num >= 9) return STRATEGIC_ROLES[0];
+    if (num >= 7) return STRATEGIC_ROLES[1];
+    if (num >= 5) return STRATEGIC_ROLES[2];
+    if (num >= 3) return STRATEGIC_ROLES[3];
+    return STRATEGIC_ROLES[4];
+};
+
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
-    
-    // Stato per il nuovo input delle attività daily
     const [newRoutineTask, setNewRoutineTask] = useState("");
 
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
@@ -24,9 +41,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const areaBudgetMin = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMin) || 0), 0);
     const areaBudgetMax = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMax) || 0), 0);
-
-    // Gestione Array per Daily Routine (migrazione sicura se prima era una stringa)
     const routineTasks = Array.isArray(data.routine) ? data.routine : [];
+
+    const currentRole = getStrategicRole(data.importance);
 
     useEffect(() => {
         if (!selectedProjectId && areaProjects.length > 0) {
@@ -86,13 +103,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const addKSM = () => {
         if (!isEditor) return;
-        const newKSM = {
-            id: Date.now(),
-            name: '',
-            valueAsIs: '',
-            targetValue: '',
-            description: ''
-        };
+        const newKSM = { id: Date.now(), name: '', valueAsIs: '', targetValue: '', description: '' };
         const currentKSMs = Array.isArray(data.ksms) ? data.ksms : [];
         updateAreaData(activeView, 'ksms', [...currentKSMs, newKSM]);
     };
@@ -103,23 +114,16 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'ksms', currentKSMs.filter(k => k.id !== ksmId));
     };
 
-    // Funzioni per Daily Routine Tasks
     const handleAddRoutineTask = () => {
         if (!newRoutineTask.trim() || !isEditor) return;
-        const newTask = {
-            id: Date.now(),
-            text: newRoutineTask.trim(),
-            completed: false
-        };
+        const newTask = { id: Date.now(), text: newRoutineTask.trim(), completed: false };
         updateAreaData(activeView, 'routine', [...routineTasks, newTask]);
         setNewRoutineTask("");
     };
 
     const toggleRoutineTask = (taskId) => {
         if (!isEditor) return;
-        const updatedTasks = routineTasks.map(task => 
-            task.id === taskId ? { ...task, completed: !task.completed } : task
-        );
+        const updatedTasks = routineTasks.map(task => task.id === taskId ? { ...task, completed: !task.completed } : task);
         updateAreaData(activeView, 'routine', updatedTasks);
     };
 
@@ -133,6 +137,29 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     return (
         <div className="space-y-6 animate-fadeIn relative">
+            {/* Tooltip Modal: Legenda Ruolo Strategico */}
+            {isLegendOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 animate-fadeIn" onClick={() => setIsLegendOpen(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center border-b border-gray-100">
+                            <h3 className="font-bold text-gray-900 text-lg">Legenda Ruolo Strategico</h3>
+                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700 transition-colors"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            {STRATEGIC_ROLES.map(role => (
+                                <div key={role.id}>
+                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2">
+                                        <span className="text-xl">{role.icon}</span> {role.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{role.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Header Area */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 flex-grow">
@@ -154,14 +181,30 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     </div>
                     
                     <div className="flex items-stretch gap-4 w-full md:w-auto">
-                        <div className="text-white rounded-lg p-3 flex flex-col items-center justify-center shadow-lg min-w-[100px]" style={{ backgroundColor: ARAD_BLUE }}>
-                            <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 mb-1" style={{ color: ARAD_GOLD }}>Importance</span>
-                            <div className="flex items-center gap-1">
-                                <input type="number" min="1" max="10" value={data.importance || 0} onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))} disabled={!isEditor} className="w-12 text-center text-2xl font-bold bg-transparent border-0 border-b-2 focus:ring-0 p-0 text-white" style={{ borderColor: ARAD_GOLD }} />
-                                <span className="text-sm opacity-60">/10</span>
+                        {/* NUOVO COMPONENTE: Ruolo Strategico (Dropdown) */}
+                        <div className="rounded-xl p-3 flex flex-col justify-center shadow-lg min-w-[190px] relative transition-colors" style={{ backgroundColor: '#0f172a' }}>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: ARAD_GOLD }}>Ruolo Strategico</span>
+                                <button onClick={() => setIsLegendOpen(true)} className="text-gray-400 hover:text-white transition-colors" title="Vedi legenda">
+                                    <Info size={14} />
+                                </button>
                             </div>
+                            <select
+                                value={currentRole.value}
+                                onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))}
+                                disabled={!isEditor}
+                                className="w-full appearance-none bg-transparent border-0 border-b-2 focus:ring-0 p-0 py-1 text-white font-bold text-xl cursor-pointer"
+                                style={{ borderColor: ARAD_GOLD }}
+                            >
+                                {STRATEGIC_ROLES.map(role => (
+                                    <option key={role.id} value={role.value} className="text-gray-900 text-base">
+                                        {role.icon} {role.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex flex-col justify-center min-w-[180px]">
+                        
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-center min-w-[180px]">
                             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Budget Totale Area</span>
                             <div className="font-bold text-lg text-gray-800">
                                 € {areaBudgetMin.toLocaleString('it-IT')} - {areaBudgetMax.toLocaleString('it-IT')}
@@ -172,12 +215,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </div>
 
             <Card title="Obiettivi Macro" icon={Target}>
-                <AdvancedEditor 
-                    value={data.objectives || ''} 
-                    onChange={(val) => updateAreaData(activeView, 'objectives', val)} 
-                    placeholder={`Definisci gli obiettivi strategici per ${area.label}...`} 
-                    disabled={!isEditor} 
-                />
+                <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Definisci gli obiettivi strategici per ${area.label}...`} disabled={!isEditor} />
             </Card>
 
             <Card title="Evoluzione Temporale (Roadmap 3 Anni)" icon={Calendar}>
@@ -186,12 +224,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         <div key={year} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col h-full">
                             <div className="text-xs font-bold text-gray-500 uppercase mb-2 text-[10px] tracking-wider">Anno {year}</div>
                             <div className="relative flex-grow h-full bg-white rounded border border-gray-100">
-                                <AdvancedEditor
-                                    value={data[`evolution_y${year}`] || ''}
-                                    onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)}
-                                    placeholder={`Focus Anno ${year}...`}
-                                    disabled={!isEditor}
-                                />
+                                <AdvancedEditor value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
                             </div>
                         </div>
                     ))}
@@ -261,24 +294,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         {(selectedProject.enablers || [""]).map((enabler, index) => (
                                             <div key={index} className="flex items-center gap-3 group">
                                                 <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex-shrink-0" />
-                                                <input
-                                                    type="text"
-                                                    value={enabler}
-                                                    placeholder={index === 0 ? "Aggiungi abilitatore..." : ""}
-                                                    className={`enabler-input-${selectedProject.id} flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm text-gray-700 placeholder-gray-300 font-medium`}
-                                                    onChange={(e) => {
-                                                        const newEnablers = [...(selectedProject.enablers || [""])];
-                                                        newEnablers[index] = e.target.value;
-                                                        updateProject(activeView, selectedProject.id, 'enablers', newEnablers);
-                                                    }}
-                                                    onKeyDown={(e) => handleEnablerKeyDown(e, index, selectedProject.id, selectedProject.enablers || [""])}
-                                                    disabled={!isEditor}
-                                                />
+                                                <input type="text" value={enabler} placeholder={index === 0 ? "Aggiungi abilitatore..." : ""} className={`enabler-input-${selectedProject.id} flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm text-gray-700 placeholder-gray-300 font-medium`} onChange={(e) => { const newEnablers = [...(selectedProject.enablers || [""])]; newEnablers[index] = e.target.value; updateProject(activeView, selectedProject.id, 'enablers', newEnablers); }} onKeyDown={(e) => handleEnablerKeyDown(e, index, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} />
                                                 {isEditor && (
-                                                    <button onClick={() => {
-                                                        const newEnablers = selectedProject.enablers.filter((_, i) => i !== index);
-                                                        updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]);
-                                                    }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity">
+                                                    <button onClick={() => { const newEnablers = selectedProject.enablers.filter((_, i) => i !== index); updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity">
                                                         <X size={16} />
                                                     </button>
                                                 )}
@@ -294,138 +312,49 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card 
-                title="Key Success Metrics (KSM)" 
-                icon={Target} 
-                action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} 
-                noPadding
-            >
+            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
                 <div className="p-6 space-y-6 bg-slate-50/50">
-                    <p className="text-sm text-gray-600 mb-2">
-                        Definisci le metriche chiave per misurare il successo in quest'area <strong>(Consigliato: massimo 3 metriche)</strong>.
-                    </p>
-
+                    <p className="text-sm text-gray-600 mb-2">Definisci le metriche chiave per misurare il successo in quest'area <strong>(Consigliato: massimo 3 metriche)</strong>.</p>
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
-                        <div className="text-center text-gray-400 italic text-sm py-8">
-                            Nessuna metrica definita. Aggiungine una per monitorare il successo.
-                        </div>
+                        <div className="text-center text-gray-400 italic text-sm py-8">Nessuna metrica definita. Aggiungine una per monitorare il successo.</div>
                     ) : (
                         data.ksms.map((ksm) => (
                             <div key={ksm.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
-                                {isEditor && (
-                                    <button 
-                                        onClick={() => removeKSM(ksm.id)} 
-                                        className="absolute top-6 right-6 text-gray-300 hover:text-red-600 p-1 transition-colors"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                )}
-                                
+                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={18} /></button>}
                                 <div className="pr-12">
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
-                                    <input 
-                                        type="text" 
-                                        value={ksm.name || ''} 
-                                        onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} 
-                                        disabled={!isEditor} 
-                                        className="w-full border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:ring-0 px-0 py-1 text-xl font-bold text-gray-800 bg-transparent transition-colors placeholder-gray-400" 
-                                        placeholder="Es. Tasso di Conversione" 
-                                    />
+                                    <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:ring-0 px-0 py-1 text-xl font-bold text-gray-800 bg-transparent transition-colors placeholder-gray-400" placeholder="Es. Tasso di Conversione" />
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label>
-                                        <input 
-                                            type="text" 
-                                            value={ksm.valueAsIs || ''} 
-                                            onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} 
-                                            disabled={!isEditor} 
-                                            className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" 
-                                            placeholder="Es. 1.2% (lascia vuoto se non disponibile)" 
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label>
-                                        <input 
-                                            type="text" 
-                                            value={ksm.targetValue || ''} 
-                                            onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} 
-                                            disabled={!isEditor} 
-                                            className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" 
-                                            placeholder="Es. > 2.5%" 
-                                        />
-                                    </div>
+                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label><input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" placeholder="Es. 1.2% (lascia vuoto se non disponibile)" /></div>
+                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label><input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border border-gray-200 rounded-md text-sm p-2.5 focus:ring-1 focus:ring-blue-500 bg-white" placeholder="Es. > 2.5%" /></div>
                                 </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
-                                    <AdvancedEditor 
-                                        value={ksm.description || ''} 
-                                        onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} 
-                                        placeholder="Descrivi lo scopo della metrica..." 
-                                        disabled={!isEditor} 
-                                    />
-                                </div>
+                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label><AdvancedEditor value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} placeholder="Descrivi lo scopo della metrica..." disabled={!isEditor} /></div>
                             </div>
                         ))
                     )}
                 </div>
             </Card>
 
-            {/* NUOVA SEZIONE: Attività Chiave Day-by-Day (To-Do List) */}
             <Card title="Attività Chiave Day-by-Day" icon={Clock}>
                 <div className="space-y-4">
-                    {/* Input Aggiunta Rapida */}
                     {isEditor && (
                         <div className="flex items-center gap-3">
-                            <input
-                                type="text"
-                                value={newRoutineTask}
-                                onChange={(e) => setNewRoutineTask(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()}
-                                placeholder="Aggiungi una nuova attività chiave da svolgere regolarmente..."
-                                className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
-                            />
-                            <Button variant="secondary" onClick={handleAddRoutineTask} className="whitespace-nowrap flex items-center gap-2 h-full">
-                                <Plus size={16} /> Aggiungi
-                            </Button>
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Aggiungi una nuova attività chiave da svolgere regolarmente..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none" />
+                            <Button variant="secondary" onClick={handleAddRoutineTask} className="whitespace-nowrap flex items-center gap-2 h-full"><Plus size={16} /> Aggiungi</Button>
                         </div>
                     )}
-
-                    {/* Lista Attività */}
                     {routineTasks.length === 0 ? (
-                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm italic">
-                            Nessuna attività day-by-day definita. Usa il campo qui sopra per aggiungerne una.
-                        </div>
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm italic">Nessuna attività day-by-day definita. Usa il campo qui sopra per aggiungerne una.</div>
                     ) : (
                         <div className="space-y-2 mt-4">
                             {routineTasks.map((task) => (
                                 <div key={task.id} className="group flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-sm transition-all">
                                     <div className="flex items-center gap-4 flex-grow cursor-pointer" onClick={() => toggleRoutineTask(task.id)}>
-                                        <button
-                                            disabled={!isEditor}
-                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                                                task.completed
-                                                    ? 'bg-blue-500 border-blue-500 text-white'
-                                                    : 'border-gray-300 hover:border-blue-400 bg-white'
-                                            }`}
-                                        >
-                                            {task.completed && <Check size={12} strokeWidth={3} />}
-                                        </button>
-                                        <span className={`text-sm transition-all select-none ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
-                                            {task.text}
-                                        </span>
+                                        <button disabled={!isEditor} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 hover:border-blue-400 bg-white'}`}>{task.completed && <Check size={12} strokeWidth={3} />}</button>
+                                        <span className={`text-sm transition-all select-none ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{task.text}</span>
                                     </div>
-                                    {isEditor && (
-                                        <button
-                                            onClick={() => removeRoutineTask(task.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1 ml-4"
-                                            title="Elimina attività"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    )}
+                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1 ml-4" title="Elimina attività"><X size={16} /></button>}
                                 </div>
                             ))}
                         </div>
