@@ -6,6 +6,9 @@ import GanttChart from './GanttChart';
 import RadarChart from './RadarChart';
 import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
+// Importiamo la logica e le icone dal file gemello
+import { STRATEGIC_ROLES, getStrategicRole } from './AreaEditor';
+
 const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     const [isProjectPreviewOpen, setIsProjectPreviewOpen] = useState(false);
 
@@ -44,7 +47,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
 
     return (
         <div className="space-y-8 animate-fadeIn relative">
-            {/* Modal Index Progetti */}
             {isProjectPreviewOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fadeIn" onClick={() => setIsProjectPreviewOpen(false)}>
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -54,9 +56,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                                     <List size={24} style={{ color: ARAD_GOLD }} /> Indice Progetti
                                 </h3>
                             </div>
-                            <button onClick={() => setIsProjectPreviewOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500">
-                                <X size={20} />
-                            </button>
+                            <button onClick={() => setIsProjectPreviewOpen(false)} className="p-2 hover:bg-gray-200 rounded-full text-gray-500"><X size={20} /></button>
                         </div>
                         <div className="p-6 overflow-y-auto custom-scrollbar bg-slate-50">
                             {projectsByArea.length === 0 ? (
@@ -66,9 +66,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                                     {projectsByArea.map(({ area, projects }) => (
                                         <div key={area.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                             <button onClick={() => { setActiveView(area.id); setIsProjectPreviewOpen(false); }} className="flex items-center gap-2 w-full mb-3 group">
-                                                <div className="p-2 rounded-lg text-white" style={{ backgroundColor: area.hex }}>
-                                                    <area.icon size={18} />
-                                                </div>
+                                                <div className="p-2 rounded-lg text-white" style={{ backgroundColor: area.hex }}><area.icon size={18} /></div>
                                                 <span className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors flex-grow text-left">{area.label}</span>
                                                 <ChevronRight size={16} className="text-gray-300" />
                                             </button>
@@ -113,17 +111,23 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                     <div className="flex-grow w-full max-w-lg">
                         <RadarChart data={activeScenario.data} areas={EXPERTISE_AREAS} />
                     </div>
-                    <div className="flex-shrink-0 w-full md:w-64 space-y-2 text-sm text-gray-600 max-h-80 overflow-y-auto pr-2">
-                        <h4 className="font-bold text-gray-800 mb-2 uppercase text-xs">Valori Puntuali</h4>
+                    
+                    {/* Valori Puntuali Aggiornati con i nuovi Ruoli Strategici */}
+                    <div className="flex-shrink-0 w-full md:w-64 space-y-3 text-sm text-gray-600 max-h-80 overflow-y-auto pr-2">
+                        <h4 className="font-bold text-gray-800 mb-3 uppercase text-xs">Valori Puntuali</h4>
                         {EXPERTISE_AREAS.map(area => {
                             const score = activeScenario.data[area.id]?.importance || 0;
+                            const role = getStrategicRole(score);
                             return (
-                                <div key={area.id} className="flex justify-between items-center border-b border-gray-50 pb-1">
-                                    <span className="flex items-center gap-2">
+                                <div key={area.id} className="flex justify-between items-center border-b border-gray-50 pb-2">
+                                    <span className="flex items-center gap-2 font-medium">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: area.hex }}></div>
                                         {area.label}
                                     </span>
-                                    <span className="font-bold" style={{ color: area.hex }}>{score}/10</span>
+                                    <span className="font-bold flex items-center gap-1 text-xs">
+                                        <span>{role.icon}</span> 
+                                        <span style={{ color: area.hex }}>{role.label}</span>
+                                    </span>
                                 </div>
                             )
                         })}
@@ -145,7 +149,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </Card>
 
-            {/* SEZIONE KSM AGGIORNATA (DASHBOARD) */}
             <Card title="Riepilogo Metriche di Successo (KSM)" icon={Target} noPadding>
                 <div className="p-6 bg-slate-50/50">
                     {!hasAnyMetrics ? (
