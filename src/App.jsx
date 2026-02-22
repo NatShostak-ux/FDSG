@@ -32,6 +32,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     const docRef = doc(db, "strategy", "hub");
+    
     const initDoc = async () => {
       try {
         const snap = await getDoc(docRef);
@@ -44,10 +45,15 @@ function App() {
       if (docSnap.exists()) {
         const loadedScenarios = docSnap.data().scenarios || [];
         setScenarios(loadedScenarios);
-        if (loadedScenarios.length > 0 && !activeScenarioId) setActiveScenarioId(loadedScenarios[0].id);
+        
+        // IL FIX È QUI: Usa la forma funzionale (prevId) per non dimenticare lo scenario attivo
+        if (loadedScenarios.length > 0) {
+          setActiveScenarioId(prevId => prevId || loadedScenarios[0].id);
+        }
       }
       setLoading(false);
     });
+    
     return () => unsubscribe();
   }, [user]);
 
@@ -176,21 +182,21 @@ function App() {
                 <button
                   key={scenario.id}
                   onClick={() => setActiveScenarioId(scenario.id)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm border ${activeScenarioId === scenario.id ? 'text-white' : 'bg-white text-gray-600 border-gray-200'}`}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm border transition-colors ${activeScenarioId === scenario.id ? 'text-white shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                   style={activeScenarioId === scenario.id ? { backgroundColor: ARAD_BLUE, borderColor: ARAD_BLUE } : {}}
                 >
                   {scenario.title}
                 </button>
               ))}
-              {isEditor && <button onClick={handleAddScenario} className="px-3 py-2 text-gray-400 bg-white border border-dashed border-gray-300 rounded-lg"><Plus size={16} /></button>}
+              {isEditor && <button onClick={handleAddScenario} className="px-3 py-2 text-gray-400 bg-white border border-dashed border-gray-300 rounded-lg hover:text-blue-600 hover:border-blue-400 transition-colors"><Plus size={16} /></button>}
             </div>
 
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100">
-                {isEditor && <button onClick={() => handleDeleteScenario(activeScenarioId)} className="text-gray-400 hover:text-red-600"><Trash2 size={18} /></button>}
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                {isEditor && <button onClick={() => handleDeleteScenario(activeScenarioId)} className="p-1 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"><Trash2 size={18} /></button>}
               </div>
               <input type="text" value={activeScenario?.title || ''} onChange={(e) => updateScenarioMeta('title', e.target.value)} disabled={!isEditor} className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1" placeholder="Titolo Scenario" />
-              <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione..." disabled={!isEditor} />
+              <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione strategica per questo scenario..." disabled={!isEditor} />
             </div>
           </div>
         )}
