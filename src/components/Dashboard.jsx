@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Euro, List, TrendingUp, Calendar, Target, ShieldAlert, AlertTriangle, X, ChevronRight } from 'lucide-react';
+import { Euro, List, TrendingUp, Calendar, Target, X, ChevronRight } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
@@ -9,7 +9,6 @@ import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     const [isProjectPreviewOpen, setIsProjectPreviewOpen] = useState(false);
 
-    // Calcolo Totale Bottom-Up (Somma di tutti i progetti di tutte le aree)
     const calculateTotalBudgetRange = () => {
         let min = 0;
         let max = 0;
@@ -25,7 +24,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
 
     const budgetRange = calculateTotalBudgetRange();
     
-    // Costruzione della lista completa dei progetti con i metadati dell'area per il Gantt
     const allProjects = EXPERTISE_AREAS.flatMap(area => {
         const areaData = activeScenario.data[area.id];
         return (areaData?.projects || []).map(p => ({ 
@@ -90,7 +88,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             )}
 
-            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
                     <div>
@@ -111,7 +108,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </div>
 
-            {/* Radar Chart */}
             <Card title="Analisi Pesi Strategici" icon={TrendingUp}>
                 <div className="flex flex-col md:flex-row gap-8 items-center">
                     <div className="flex-grow w-full max-w-lg">
@@ -135,7 +131,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </Card>
 
-            {/* Roadmap Strategica Integrata (Corretta) */}
             <Card title="Roadmap Strategica Integrata (2026-2029)" icon={Calendar} noPadding>
                 <div className="p-4 bg-gray-50 border-b border-gray-100 text-sm text-gray-500">
                     Visualizzazione consolidata per aree operative (drag per spostare, bordi per ridimensionare).
@@ -150,7 +145,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             </Card>
 
-            {/* Riepilogo KSM */}
+            {/* SEZIONE KSM AGGIORNATA (DASHBOARD) */}
             <Card title="Riepilogo Metriche di Successo (KSM)" icon={Target} noPadding>
                 <div className="p-6 bg-slate-50/50">
                     {!hasAnyMetrics ? (
@@ -167,17 +162,20 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
                                         {areaKSMs.map(ksm => (
-                                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-gray-300">
-                                                <div className="flex-grow">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-gray-900 text-sm">{ksm.name}</span>
-                                                        {ksm.abbr && <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono">{ksm.abbr}</span>}
-                                                    </div>
-                                                    {ksm.description && <p className="text-xs text-gray-500 mt-1">{ksm.description}</p>}
+                                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-gray-300">
+                                                <div className="flex-grow pr-4">
+                                                    <span className="font-bold text-gray-900 text-sm block mb-1">{ksm.name || 'Metrica senza nome'}</span>
+                                                    {ksm.description && <div className="text-xs text-gray-500 line-clamp-2" dangerouslySetInnerHTML={{ __html: ksm.description }} />}
                                                 </div>
-                                                <div className="flex gap-4 text-xs shrink-0">
-                                                    {ksm.guardRail && <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2 py-1.5 rounded border border-green-100 min-w-[100px] justify-center"><ShieldAlert size={12} /><span>{ksm.guardRail}</span></div>}
-                                                    {ksm.alertLevel && <div className="flex items-center gap-1.5 text-red-700 bg-red-50 px-2 py-1.5 rounded border border-red-100 min-w-[100px] justify-center"><AlertTriangle size={12} /><span>{ksm.alertLevel}</span></div>}
+                                                <div className="flex gap-6 text-sm shrink-0 bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">As Is</span>
+                                                        <span className="font-medium text-gray-700">{ksm.valueAsIs || '-'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col border-l border-gray-200 pl-6">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Target</span>
+                                                        <span className="font-bold text-blue-600">{ksm.targetValue || '-'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
