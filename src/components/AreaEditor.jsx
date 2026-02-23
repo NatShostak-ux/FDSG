@@ -180,7 +180,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </div>
 
             <Card title="Obiettivi Macro" icon={Target}>
-                <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Definisci gli obiettivi...`} disabled={!isEditor} />
+                <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Quali sono gli obiettivi dell'area per garantire l'aderenza al modello strategico in oggetto? (elenco numerato)`} disabled={!isEditor} />
             </Card>
 
             {/* SEZIONE RINOMINATA E ALLINEATA */}
