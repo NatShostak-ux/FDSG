@@ -282,11 +282,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Attività Chiave Day-by-Day" icon={Clock}>
+            <Card title="Attività a Regime" icon={Clock}>
                 <div className="space-y-4">
                     {isEditor && (
                         <div className="flex items-center gap-3">
-                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Aggiungi una nuova attività chiave..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none" />
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime necessarie per raggiungere gli obiettivi fissati." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none" />
                             <Button variant="secondary" onClick={handleAddRoutineTask}><Plus size={16} /> Aggiungi</Button>
                         </div>
                     )}
