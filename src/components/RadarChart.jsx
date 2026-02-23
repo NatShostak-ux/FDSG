@@ -1,4 +1,5 @@
 import React from 'react';
+import { getStrategicRole } from './AreaEditor';
 
 const ARAD_BLUE = '#02192c';
 const ARAD_GOLD = '#bf9000';
@@ -8,7 +9,7 @@ const RadarChart = ({ data, areas }) => {
     const size = 500;
     const center = size / 2;
     const radius = 160;
-    const scale = 10;
+    const scale = 5; // MODIFICATO: La scala ora è su base 5
 
     const angleStep = (Math.PI * 2) / areas.length;
 
@@ -20,15 +21,18 @@ const RadarChart = ({ data, areas }) => {
     };
 
     const polyPoints = areas.map((area, i) => {
-        const value = data[area.id]?.importance || 0;
+        const rawValue = data[area.id]?.importance || 0;
+        // MODIFICATO: Traduciamo il valore (es. da 10 a 5, o da 8 a 4)
+        const value = getStrategicRole(rawValue).value;
         return getCoordinates(value, i).join(',');
     }).join(' ');
 
-    const gridLevels = [2, 4, 6, 8, 10];
+    // MODIFICATO: I livelli della griglia ora sono da 1 a 5
+    const gridLevels = [1, 2, 3, 4, 5];
 
     return (
-        <div className="flex justify-center items-center py-8 rounded-xl overflow-hidden shadow-inner" style={{ backgroundColor: ARAD_CHART_BG }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="flex justify-center items-center py-8 rounded-xl overflow-hidden shadow-inner w-full h-full min-h-[450px]" style={{ backgroundColor: ARAD_CHART_BG }}>
+            <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 <defs>
                     <radialGradient id="polyGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
                         <stop offset="0%" stopColor={ARAD_GOLD} stopOpacity="0.4" />
@@ -61,9 +65,10 @@ const RadarChart = ({ data, areas }) => {
                 })}
 
                 {areas.map((area, i) => {
-                    const [x, y] = getCoordinates(10, i);
-                    const [endX, endY] = getCoordinates(10.5, i);
-                    const [lx, ly] = getCoordinates(12, i);
+                    // MODIFICATO: Usiamo la nuova scala (5) e i suoi proporzionali per le linee
+                    const [x, y] = getCoordinates(5, i);
+                    const [endX, endY] = getCoordinates(5.25, i);
+                    const [lx, ly] = getCoordinates(6, i);
 
                     return (
                         <g key={area.id}>
@@ -96,7 +101,9 @@ const RadarChart = ({ data, areas }) => {
                 />
 
                 {areas.map((area, i) => {
-                    const value = data[area.id]?.importance || 0;
+                    const rawValue = data[area.id]?.importance || 0;
+                    // MODIFICATO: Anche i pallini gialli devono usare il valore tradotto
+                    const value = getStrategicRole(rawValue).value;
                     const [x, y] = getCoordinates(value, i);
                     return (
                         <circle
