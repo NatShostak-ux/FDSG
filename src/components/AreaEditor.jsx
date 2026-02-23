@@ -7,21 +7,23 @@ import NotebookLMChat from './NotebookLMChat';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
+// AGGIORNATI I VALORI: Da 1 a 5, con label esplicite
 export const STRATEGIC_ROLES = [
-    { id: 'strategic', value: 10, label: 'Strategic', icon: '🔥', title: 'Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
-    { id: 'core', value: 8, label: 'Core', icon: '⭐', title: 'Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane." },
-    { id: 'enabling', value: 6, label: 'Enabling', icon: '🏗️', title: 'Enabling (Foundational / Strutturale)', desc: 'Sono le "fondamenta". I prerequisiti affinché le aree Core e Strategic possano esistere.' },
-    { id: 'supporting', value: 4, label: 'Supporting', icon: '⚙️', title: 'Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale, vanno ottimizzate e automatizzate." },
-    { id: 'exploratory', value: 2, label: 'Exploratory', icon: '🧪', title: 'Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale per testare nuove acque." }
+    { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
+    { id: 'core', value: 4, label: '4 - Core', icon: '⭐', title: '4 - Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane." },
+    { id: 'enabling', value: 3, label: '3 - Enabling', icon: '🏗️', title: '3 - Enabling (Foundational / Strutturale)', desc: 'Sono le "fondamenta". I prerequisiti affinché le aree Core e Strategic possano esistere.' },
+    { id: 'supporting', value: 2, label: '2 - Supporting', icon: '⚙️', title: '2 - Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale, vanno ottimizzate e automatizzate." },
+    { id: 'exploratory', value: 1, label: '1 - Exploratory', icon: '🧪', title: '1 - Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale per testare nuove acque." }
 ];
 
+// FUNZIONE AGGIORNATA: Legge sia i vecchi valori 1-10 che i nuovi 1-5
 export const getStrategicRole = (val) => {
     const num = Number(val) || 0;
-    if (num >= 9) return STRATEGIC_ROLES[0];
-    if (num >= 7) return STRATEGIC_ROLES[1];
-    if (num >= 5) return STRATEGIC_ROLES[2];
-    if (num >= 3) return STRATEGIC_ROLES[3];
-    return STRATEGIC_ROLES[4];
+    if (num >= 9 || num === 5) return STRATEGIC_ROLES[0]; // Strategic
+    if (num >= 7 || num === 4) return STRATEGIC_ROLES[1]; // Core
+    if (num >= 5 || num === 3) return STRATEGIC_ROLES[2]; // Enabling
+    if (num >= 3 || num === 2) return STRATEGIC_ROLES[3]; // Supporting
+    return STRATEGIC_ROLES[4]; // Exploratory
 };
 
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
@@ -113,7 +115,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     return (
         <div className="space-y-6 animate-fadeIn relative">
             
-            {/* Modal Note */}
             {isNotesOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -129,7 +130,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             )}
 
-            {/* Header Area */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative z-40">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4 flex-grow">
@@ -298,12 +298,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             {routineTasks.map((task) => (
                                 <div key={task.id} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
                                     <div className="flex items-start gap-3 flex-grow">
-                                        {/* Cerchietto con dimensioni fisse (non si stira mai) */}
                                         <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>
                                             {task.completed && <Check size={12} strokeWidth={3} />}
                                         </button>
                                         
-                                        {/* Textarea intelligente auto-espandibile */}
                                         {isEditor ? (
                                             <textarea
                                                 value={task.text}
