@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Sparkles, ChevronRight, Check, Info } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
-import NotebookLMChat from './NotebookLMChat';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
-// AGGIORNATI I VALORI: Da 1 a 5, con label esplicite
 export const STRATEGIC_ROLES = [
     { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
     { id: 'core', value: 4, label: '4 - Core', icon: '⭐', title: '4 - Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane." },
@@ -16,19 +14,17 @@ export const STRATEGIC_ROLES = [
     { id: 'exploratory', value: 1, label: '1 - Exploratory', icon: '🧪', title: '1 - Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale per testare nuove acque." }
 ];
 
-// FUNZIONE AGGIORNATA: Legge sia i vecchi valori 1-10 che i nuovi 1-5
 export const getStrategicRole = (val) => {
     const num = Number(val) || 0;
-    if (num >= 9 || num === 5) return STRATEGIC_ROLES[0]; // Strategic
-    if (num >= 7 || num === 4) return STRATEGIC_ROLES[1]; // Core
-    if (num >= 5 || num === 3) return STRATEGIC_ROLES[2]; // Enabling
-    if (num >= 3 || num === 2) return STRATEGIC_ROLES[3]; // Supporting
-    return STRATEGIC_ROLES[4]; // Exploratory
+    if (num >= 9 || num === 5) return STRATEGIC_ROLES[0];
+    if (num >= 7 || num === 4) return STRATEGIC_ROLES[1];
+    if (num >= 5 || num === 3) return STRATEGIC_ROLES[2];
+    if (num >= 3 || num === 2) return STRATEGIC_ROLES[3];
+    return STRATEGIC_ROLES[4];
 };
 
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
     const [isNotesOpen, setIsNotesOpen] = useState(false);
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [newRoutineTask, setNewRoutineTask] = useState("");
@@ -139,7 +135,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <div className="flex items-center gap-3">
                                 <p className="text-gray-500 text-sm">Pianificazione operativa</p>
                                 <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200 transition-colors"><StickyNote size={12} /> Note</button>
-                                <button onClick={() => setIsChatOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors"><Sparkles size={12} /> AI Chat</button>
                             </div>
                         </div>
                     </div>
@@ -332,8 +327,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     )}
                 </div>
             </Card>
-
-            <NotebookLMChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} areaLabel={area.label} />
         </div>
     );
 };
