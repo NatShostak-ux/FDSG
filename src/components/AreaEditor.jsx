@@ -103,6 +103,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'routine', routineTasks.filter(t => t.id !== taskId));
     };
 
+    const updateRoutineTaskText = (taskId, newText) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'routine', routineTasks.map(t => t.id === taskId ? { ...t, text: newText } : t));
+    };
+
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
 
     return (
@@ -133,14 +138,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <h2 className="text-2xl font-bold text-gray-900">{area.label}</h2>
                             <div className="flex items-center gap-3">
                                 <p className="text-gray-500 text-sm">Pianificazione operativa</p>
-                                <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200"><StickyNote size={12} /> Note</button>
-                                <button onClick={() => setIsChatOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 shadow-sm"><Sparkles size={12} /> AI Chat</button>
+                                <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200 transition-colors"><StickyNote size={12} /> Note</button>
+                                <button onClick={() => setIsChatOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors"><Sparkles size={12} /> AI Chat</button>
                             </div>
                         </div>
                     </div>
                     
                     <div className="flex items-stretch gap-4 w-full md:w-auto relative">
-                        {/* Ruolo Strategico con Tooltip Popover */}
                         <div className="rounded-xl p-3 flex flex-col justify-center shadow-lg bg-slate-900 min-w-[190px] relative transition-colors">
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-[10px] uppercase font-bold tracking-wider text-yellow-500">Ruolo Strategico</span>
@@ -150,7 +154,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 {STRATEGIC_ROLES.map(role => <option key={role.id} value={role.value}>{role.icon} {role.label}</option>)}
                             </select>
 
-                            {/* TOOLTIP POPOVER */}
                             {isLegendOpen && (
                                 <div>
                                     <div className="fixed inset-0 z-[60]" onClick={() => setIsLegendOpen(false)}></div>
@@ -183,13 +186,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Quali sono gli obiettivi dell'area per garantire l'aderenza al modello strategico in oggetto? (elenco numerato)`} disabled={!isEditor} />
             </Card>
 
-            {/* SEZIONE RINOMINATA E ALLINEATA */}
             <Card title="Descrizione Qualitativa del Phasing" icon={Calendar}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
                         <div key={year} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
                             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Anno {year}</div>
-                            {/* Le classi aggiunte qui forzano il box dell'editor a espandersi fino in fondo! */}
                             <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden [&>div]:flex-grow [&>div]:flex [&>div]:flex-col">
                                 <AdvancedEditor value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
                             </div>
@@ -259,7 +260,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Key Success Metrics (KSM) max 3" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
+            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
                 <div className="p-6 space-y-6 bg-slate-50/50">
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
                         <div className="text-gray-400 italic text-sm">Nessuna metrica definita.</div>
@@ -286,8 +287,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="space-y-4">
                     {isEditor && (
                         <div className="flex items-center gap-3">
-                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime necessarie per raggiungere gli obiettivi fissati." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none" />
-                            <Button variant="secondary" onClick={handleAddRoutineTask}><Plus size={16} /> Aggiungi</Button>
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime necessarie per raggiungere gli obiettivi fissati." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
+                            <Button variant="secondary" onClick={handleAddRoutineTask}>+ Aggiungi</Button>
                         </div>
                     )}
                     {routineTasks.length === 0 ? (
@@ -295,12 +296,38 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     ) : (
                         <div className="space-y-2 mt-4">
                             {routineTasks.map((task) => (
-                                <div key={task.id} className="group flex items-center justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
-                                    <div className="flex items-center gap-4 flex-grow cursor-pointer" onClick={() => toggleRoutineTask(task.id)}>
-                                        <button disabled={!isEditor} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>{task.completed && <Check size={12} strokeWidth={3} />}</button>
-                                        <span className={`text-sm select-none ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{task.text}</span>
+                                <div key={task.id} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                                    <div className="flex items-start gap-3 flex-grow">
+                                        {/* Cerchietto con dimensioni fisse (non si stira mai) */}
+                                        <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>
+                                            {task.completed && <Check size={12} strokeWidth={3} />}
+                                        </button>
+                                        
+                                        {/* Textarea intelligente auto-espandibile */}
+                                        {isEditor ? (
+                                            <textarea
+                                                value={task.text}
+                                                onChange={(e) => {
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                    updateRoutineTaskText(task.id, e.target.value);
+                                                }}
+                                                ref={el => {
+                                                    if(el) {
+                                                        el.style.height = 'auto';
+                                                        el.style.height = el.scrollHeight + 'px';
+                                                    }
+                                                }}
+                                                rows={1}
+                                                className={`flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm outline-none transition-colors resize-none overflow-hidden leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}
+                                            />
+                                        ) : (
+                                            <span className={`text-sm select-none leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
+                                                {task.text}
+                                            </span>
+                                        )}
                                     </div>
-                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 p-1"><X size={16} /></button>}
+                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 p-1 flex-shrink-0 mt-0.5"><X size={16} /></button>}
                                 </div>
                             ))}
                         </div>
