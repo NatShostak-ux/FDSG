@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -14,6 +14,10 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
     const [aiResult, setAiResult] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
+    
+    // STATI PER LA COLLABORAZIONE FLUIDA
+    const [isFocused, setIsFocused] = useState(false);
+    const timerRef = useRef(null);
 
     const editor = useEditor({
         extensions: [
@@ -23,9 +27,27 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
                 openOnClick: false,
             }),
         ],
+        // Inizializza con il valore dal database
         content: value,
         editable: !disabled,
         onUpdate: ({ editor }) => {
+            const html = editor.getHTML();
+            
+            // Cancella il timer precedente se l'utente sta ancora scrivendo
+            if (timerRef.current) clearTimeout(timerRef.current);
+            
+            // Imposta un nuovo timer: salva su Firebase solo dopo 800ms di inattività
+            timerRef.current = setTimeout(() => {
+                onChange(html);
+            }, 800);
+        },
+        onFocus: () => {
+            setIsFocused(true);
+        },
+        onBlur: ({ editor }) => {
+            setIsFocused(false);
+            // Salva istantaneamente quando si esce dal campo
+            if (timerRef.current) clearTimeout(timerRef.current);
             onChange(editor.getHTML());
         },
         editorProps: {
@@ -35,17 +57,38 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
         },
     });
 
+    // Effetto per aggiornare l'editor con i dati provenienti da Firebase
     useEffect(() => {
-        if (editor && value !== editor.getHTML()) {
-            editor.commands.setContent(value);
+        // AGGIORNA SOLO SE L'UTENTE NON CI STA SCRIVENDO DENTRO
+        if (editor && !isFocused) {
+            const currentHTML = editor.getHTML();
+            // Evita loop infiniti di aggiornamento se il testo è già uguale
+            if (value !== currentHTML) {
+                // Mantiene il cursore al suo posto se l'editor non è completamente distrutto
+                const { from, to } = editor.state.selection;
+                editor.commands.setContent(value || '');
+                // Prova a ripristinare la posizione del cursore, se possibile
+                try {
+                     editor.commands.setTextSelection({ from, to });
+                } catch (e) {
+                     // Ignora errori se la lunghezza del testo è cambiata drasticamente
+                }
+            }
         }
-    }, [value, editor]);
+    }, [value, editor, isFocused]);
 
     useEffect(() => {
         if (editor) {
             editor.setEditable(!disabled);
         }
     }, [disabled, editor]);
+
+    // Pulizia del timer se il componente viene distrutto
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
 
     if (!editor) return null;
 
@@ -87,12 +130,14 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
         }
         setAiResult('');
         setIsAIActive(false);
+        // Forza un salvataggio quando applichi l'AI
+        onChange(editor.getHTML());
     };
 
     return (
-        <div className={`flex flex-col border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden transition-all ${isMaximized ? 'fixed inset-4 z-[1000] shadow-2xl' : 'relative w-full'}`}>
+        <div className={`flex flex-col border border-gray-200 rounded-2xl bg-white shadow-sm overflow-hidden transition-all ${isMaximized ? 'fixed inset-4 z-[1000] shadow-2xl' : 'relative w-full h-full'}`}>
             {!disabled && (
-                <div className="flex flex-col border-b border-gray-100 bg-gray-50/50">
+                <div className="flex flex-col border-b border-gray-100 bg-gray-50/50 print:hidden">
                     <div className="flex flex-wrap items-center justify-between p-1.5 gap-1">
                         <div className="flex items-center gap-0.5">
                             <button onClick={toggleBold} className={`p-1 rounded ${editor.isActive('bold') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}><Bold size={15} /></button>
@@ -138,8 +183,8 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
                     )}
                 </div>
             )}
-            <div className="relative flex-grow">
-                <EditorContent editor={editor} />
+            <div className="relative flex-grow flex flex-col [&>div]:flex-grow">
+                <EditorContent editor={editor} className="flex-grow flex flex-col" />
                 {(!editor.getHTML() || editor.getHTML() === '<p></p>') && (
                     <div className="absolute top-4 left-4 text-gray-400 pointer-events-none text-xs italic">{placeholder}</div>
                 )}
@@ -163,6 +208,7 @@ const AdvancedEditor = ({ value, onChange, placeholder, disabled = false }) => {
                 .prose ul { list-style-type: disc; padding-left: 1.25rem; }
                 .prose ol { list-style-type: decimal; padding-left: 1.25rem; }
                 .no-scrollbar::-webkit-scrollbar { display: none; }
+                .tiptap { flex-grow: 1; outline: none; }
             `}} />
         </div>
     );
