@@ -259,7 +259,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 </div>
             </Card>
 
-            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
+            <Card title="Key Success Metrics (KSM) max 3" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
                 <div className="p-6 space-y-6 bg-slate-50/50">
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
                         <div className="text-gray-400 italic text-sm">Nessuna metrica definita.</div>
