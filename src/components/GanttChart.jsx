@@ -14,28 +14,29 @@ const GanttChart = ({
     const containerRef = useRef(null);
     const [draggedProject, setDraggedProject] = useState(null);
 
-    const monthWidth = 30;
+    const monthWidth = 30; // Larghezza fissa e precisa di 1 mese in pixel
     const GANTT_START_YEAR = 2026;
     const TOTAL_YEARS = 4;
     const TOTAL_MONTHS = TOTAL_YEARS * 12;
     const totalWidth = TOTAL_MONTHS * monthWidth;
 
-    // MATEMATICA ESATTA: Converte YYYY-MM nell'offset in pixel dal margine (senza errori di fuso orario)
+    // Converte puramente in modo matematico YYYY-MM in pixel (niente new Date che sballa coi fusi orari)
     const dateToPixel = (dateStr) => {
         if (!dateStr) return 0;
         const [year, month] = dateStr.split('-');
         const monthsDiff = (parseInt(year, 10) - GANTT_START_YEAR) * 12 + (parseInt(month, 10) - 1);
-        return Math.max(0, monthsDiff * monthWidth);
+        return monthsDiff * monthWidth;
     };
 
+    // Converte puramente i pixel in stringa YYYY-MM
     const pixelToDate = (px) => {
         const totalMonths = Math.round(px / monthWidth);
-        const date = new Date(`${GANTT_START_YEAR}-01-01`);
-        date.setMonth(date.getMonth() + totalMonths);
-        return date.toISOString().slice(0, 7);
+        const y = GANTT_START_YEAR + Math.floor(totalMonths / 12);
+        const m = (totalMonths % 12) + 1;
+        return `${y}-${m.toString().padStart(2, '0')}`;
     };
 
-    const handleMouseDown = (e, project, mode = 'move') => {
+    const handleMouseDown = (e, project, mode) => {
         if (!isEditor) return;
         if (onSelectProject) onSelectProject(project.id);
         
@@ -43,9 +44,8 @@ const GanttChart = ({
         e.stopPropagation();
         
         const currentLeft = dateToPixel(project.start);
-        
-        // FIX: Aggiungiamo 1 mese (+ monthWidth) in modo che la barra includa visivamente tutto il mese finale
-        const currentWidth = Math.max(monthWidth, (dateToPixel(project.end) - currentLeft) + monthWidth);
+        // La larghezza copre FINO ALLA FINE del mese finale (+ monthWidth)
+        const currentWidth = (dateToPixel(project.end) - currentLeft) + monthWidth;
 
         setDraggedProject({
             ...project,
@@ -64,37 +64,53 @@ const GanttChart = ({
         const deltaX = e.clientX - draggedProject.startX;
         
         if (draggedProject.mode === 'move') {
-            const newLeft = Math.max(0, Math.min(totalWidth - draggedProject.currentWidth, draggedProject.originalLeft + deltaX));
+            // Sposta tutto il blocco
+            let rawNewLeft = draggedProject.originalLeft + deltaX;
+            let snappedLeft = Math.round(rawNewLeft / monthWidth) * monthWidth;
+            const maxLeft = totalWidth - draggedProject.currentWidth;
+            const newLeft = Math.max(0, Math.min(maxLeft, snappedLeft));
+            
             setDraggedProject(prev => ({ ...prev, currentLeft: newLeft }));
+            
         } else if (draggedProject.mode === 'resize-right') {
-            const newWidth = Math.max(monthWidth, draggedProject.originalWidth + deltaX);
+            // Estende solo la fine
+            let rawNewWidth = draggedProject.originalWidth + deltaX;
+            let snappedWidth = Math.round(rawNewWidth / monthWidth) * monthWidth;
+            const maxAvailableWidth = totalWidth - draggedProject.originalLeft;
+            const newWidth = Math.max(monthWidth, Math.min(maxAvailableWidth, snappedWidth)); // Minimo 1 mese
+            
             setDraggedProject(prev => ({ ...prev, currentWidth: newWidth }));
+            
+        } else if (draggedProject.mode === 'resize-left') {
+            // Estende solo l'inizio (Tenendo bloccata la parte destra)
+            let rawNewLeft = draggedProject.originalLeft + deltaX;
+            let snappedLeft = Math.round(rawNewLeft / monthWidth) * monthWidth;
+            
+            const maxLeft = draggedProject.originalLeft + draggedProject.originalWidth - monthWidth;
+            const newLeft = Math.max(0, Math.min(maxLeft, snappedLeft));
+            
+            const rightEdge = draggedProject.originalLeft + draggedProject.originalWidth;
+            const newWidth = rightEdge - newLeft;
+            
+            setDraggedProject(prev => ({ ...prev, currentLeft: newLeft, currentWidth: newWidth }));
         }
     };
 
     const handleMouseUp = () => {
         if (draggedProject && onUpdateProject) {
-            
-            // FIX ANTISTRESS: Se non mi sono mosso di almeno 5 pixel, è solo un click! Non salvo e non accorcio.
-            if (Math.abs(draggedProject.currentLeft - draggedProject.originalLeft) < 5 && 
-                Math.abs(draggedProject.currentWidth - draggedProject.originalWidth) < 5) {
-                setDraggedProject(null);
-                return;
-            }
+            // Se non si è mosso di almeno 1 mese, consideralo un click normale. Non salvare.
+            if (draggedProject.currentLeft !== draggedProject.originalLeft || 
+                draggedProject.currentWidth !== draggedProject.originalWidth) {
+                
+                const newStartDate = pixelToDate(draggedProject.currentLeft);
+                // Sottraiamo il mese "cuscinetto" per trovare il mese finale corretto nel DB
+                const newEndDate = pixelToDate(draggedProject.currentLeft + draggedProject.currentWidth - monthWidth);
 
-            let newStartDate = pixelToDate(draggedProject.currentLeft);
-            
-            // FIX MESE FINE: Sottraiamo il monthWidth aggiunto prima, per salvare la data reale su Firebase
-            let newEndDate = pixelToDate(draggedProject.currentLeft + draggedProject.currentWidth - monthWidth);
-            
-            if (newStartDate > newEndDate) {
-                newEndDate = newStartDate;
+                onUpdateProject(draggedProject.areaId, draggedProject.id, { 
+                    start: newStartDate, 
+                    end: newEndDate 
+                });
             }
-
-            onUpdateProject(draggedProject.areaId, draggedProject.id, { 
-                start: newStartDate, 
-                end: newEndDate 
-            });
         }
         setDraggedProject(null);
     };
@@ -114,9 +130,15 @@ const GanttChart = ({
         const isSelected = selectedProjectId === p.id;
         const isDragging = draggedProject?.id === p.id;
         
-        const left = isDragging ? draggedProject.currentLeft : dateToPixel(p.start);
-        // VISUALIZZAZIONE FIXATA: + monthWidth per includere l'intero mese di fine
-        const width = isDragging ? draggedProject.currentWidth : Math.max(monthWidth, (dateToPixel(p.end) - left) + monthWidth);
+        let left, width;
+        
+        if (isDragging) {
+            left = draggedProject.currentLeft;
+            width = draggedProject.currentWidth;
+        } else {
+            left = dateToPixel(p.start);
+            width = (dateToPixel(p.end) - left) + monthWidth;
+        }
         
         const topOffset = 8 + (rowIndex * 32);
 
@@ -127,8 +149,8 @@ const GanttChart = ({
                     e.stopPropagation();
                     if (onSelectProject) onSelectProject(p.id);
                 }}
-                className={`absolute h-6 rounded-md flex items-center px-2 text-white text-[10px] cursor-pointer ${
-                    isSelected ? 'ring-2 ring-blue-500 shadow-lg z-30' : 'opacity-80 hover:opacity-100 z-10'
+                className={`absolute h-6 rounded-md flex items-center px-2 text-white text-[10px] select-none group ${
+                    isSelected ? 'ring-2 ring-blue-500 shadow-lg z-30' : 'opacity-85 hover:opacity-100 z-10'
                 }`}
                 style={{
                     left: `${left}px`,
@@ -136,23 +158,39 @@ const GanttChart = ({
                     top: `${topOffset}px`,
                     backgroundColor: areaColor,
                     border: isSelected ? '1px solid white' : 'none',
-                    // LA MAGIA È QUI: Niente più "all". Animiamo solo i colori, così non c'è "effetto elastico"
-                    transition: isDragging ? 'none' : 'background-color 0.2s, opacity 0.2s, box-shadow 0.2s'
+                    // Tolta l'animazione di layout per evitare l'effetto "elastico" durante le modifiche testuali
+                    transition: 'background-color 0.2s, opacity 0.2s, box-shadow 0.2s'
                 }}
             >
-                <span className="truncate font-bold pointer-events-none select-none">{p.title || 'Nuovo Progetto'}</span>
+                <span className="truncate font-bold pointer-events-none z-20">{p.title || 'Nuovo Progetto'}</span>
                 
+                {/* MANIGLIA SINISTRA (Inizio Progetto) */}
                 {isEditor && (
                     <div 
-                        className="absolute right-0 top-0 bottom-0 w-3 cursor-e-resize z-40" 
-                        onMouseDown={(e) => handleMouseDown(e, p, 'resize-right')}
-                    ></div>
+                        className="absolute left-0 top-0 bottom-0 w-3 cursor-w-resize z-40 flex items-center justify-center hover:bg-white/20 rounded-l-md" 
+                        onMouseDown={(e) => handleMouseDown(e, p, 'resize-left')}
+                    >
+                        <div className="w-0.5 h-3 bg-white/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
                 )}
                 
-                <div 
-                    className="absolute inset-0 z-0" 
-                    onMouseDown={(e) => handleMouseDown(e, p, 'move')}
-                ></div>
+                {/* CORPO CENTRALE (Sposta tutto il progetto) */}
+                {isEditor && (
+                    <div 
+                        className="absolute inset-y-0 left-3 right-3 z-30 cursor-grab active:cursor-grabbing" 
+                        onMouseDown={(e) => handleMouseDown(e, p, 'move')}
+                    ></div>
+                )}
+
+                {/* MANIGLIA DESTRA (Fine Progetto) */}
+                {isEditor && (
+                    <div 
+                        className="absolute right-0 top-0 bottom-0 w-3 cursor-e-resize z-40 flex items-center justify-center hover:bg-white/20 rounded-r-md" 
+                        onMouseDown={(e) => handleMouseDown(e, p, 'resize-right')}
+                    >
+                        <div className="w-0.5 h-3 bg-white/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                )}
             </div>
         );
     };
