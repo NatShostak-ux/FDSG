@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, LogOut } from 'lucide-react';
+import { Plus, Trash2, LogOut, ArrowLeft } from 'lucide-react';
 import Button from './components/ui/Button';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import AreaEditor from './components/AreaEditor';
 import AdvancedEditor from './components/AdvancedEditor';
+import MasterRoadmapView from './components/MasterRoadmapView'; // IMPORT DEL NUOVO COMPONENTE
 import { ARAD_BLUE, ARAD_GOLD, INITIAL_SCENARIOS, EMPTY_AREA_DATA, EXPERTISE_AREAS } from './utils/constants';
 import { auth, db, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -19,6 +20,9 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditor, setIsEditor] = useState(false);
+  
+  // NUOVO STATO: Gestisce la visualizzazione Livello 0 vs Livello 1
+  const [appMode, setAppMode] = useState('master'); // 'master' | 'scenario'
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -45,17 +49,33 @@ function App() {
       if (docSnap.exists()) {
         const loadedScenarios = docSnap.data().scenarios || [];
         setScenarios(loadedScenarios);
-        
-        // IL FIX È QUI: Usa la forma funzionale (prevId) per non dimenticare lo scenario attivo
-        if (loadedScenarios.length > 0) {
-          setActiveScenarioId(prevId => prevId || loadedScenarios[0].id);
-        }
       }
       setLoading(false);
     });
     
     return () => unsubscribe();
   }, [user]);
+
+  // FUNZIONE DI COLLEGAMENTO ROADMAP -> SCENARIO
+  const handleSelectPhase = (phaseId) => {
+    if (scenarios.length < 3) return; // Sicurezza
+
+    let targetScenarioId = null;
+    
+    // Logica di instradamento basata sull'ordine degli scenari nel DB
+    // phaseId 1 = Fase 1 -> Scenario 3 (indice 2)
+    // phaseId 2 = Fase 2A -> Scenario 2 (indice 1)
+    // phaseId 3 = Fase 2B -> Scenario 1 (indice 0)
+    if (phaseId === 1) targetScenarioId = scenarios[2]?.id;
+    if (phaseId === 2) targetScenarioId = scenarios[1]?.id;
+    if (phaseId === 3) targetScenarioId = scenarios[0]?.id;
+
+    if (targetScenarioId) {
+        setActiveScenarioId(targetScenarioId);
+        setActiveView('dashboard'); // Resetta la vista alla dashboard dello scenario
+        setAppMode('scenario'); // Entra nel Livello 1
+    }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
   if (!user) return <Login />;
@@ -72,27 +92,6 @@ function App() {
     setScenarios(prev => {
       const updated = prev.map(s => s.id === activeScenarioId ? { ...s, [key]: value } : s);
       persistScenarios(updated); return updated;
-    });
-  };
-
-  const handleAddScenario = () => {
-    if (!isEditor) return;
-    const newId = Date.now();
-    setScenarios(prev => {
-      const updated = [...prev, { id: newId, title: 'Nuovo Scenario', description: '', data: {} }];
-      persistScenarios(updated); return updated;
-    });
-    setActiveScenarioId(newId);
-  };
-
-  const handleDeleteScenario = (id) => {
-    if (!isEditor) return;
-    setScenarios(prev => {
-      if (prev.length <= 1) return prev;
-      const filtered = prev.filter(s => s.id !== id);
-      persistScenarios(filtered);
-      if (activeScenarioId === id) setActiveScenarioId(filtered[0].id);
-      return filtered;
     });
   };
 
@@ -151,15 +150,24 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12" style={{ fontFamily: 'Outfit, sans-serif' }}>
       
+      {/* HEADER DINAMICO */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="text-2xl font-bold tracking-tight" style={{ color: ARAD_BLUE }}>ARAD <span style={{ color: ARAD_GOLD }}>Digital</span></span>
             <div className="h-6 w-px bg-gray-300"></div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900 leading-tight">Feudi di San Gregorio</span>
-              <span className="text-xs font-medium text-gray-500">Strategy Hub | {activeScenario?.title}</span>
-            </div>
+            
+            {/* Tasto Indietro o Testo Standard */}
+            {appMode === 'scenario' ? (
+                <button 
+                    onClick={() => setAppMode('master')} 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                >
+                    <ArrowLeft size={18} /> Torna alla Roadmap Strategica
+                </button>
+            ) : (
+                <span className="text-lg font-bold text-gray-900 leading-tight">Feudi di San Gregorio</span>
+            )}
           </div>
           <div className="flex items-center gap-6">
             <div className="flex flex-col text-right">
@@ -167,7 +175,7 @@ function App() {
               <span className={`text-xs font-bold uppercase ${isEditor ? 'text-blue-600' : 'text-gray-400'}`}>{isEditor ? 'Editor' : 'Viewer'}</span>
             </div>
             
-            <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg">
+            <button onClick={() => logout()} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:text-red-600 rounded-lg transition-colors">
               <LogOut size={18} /><span>Esci</span>
             </button>
           </div>
@@ -175,47 +183,41 @@ function App() {
       </header>
 
       <main className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50">
-        {scenarios.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 overflow-x-auto pb-4">
-              {scenarios.map(scenario => (
-                <button
-                  key={scenario.id}
-                  onClick={() => setActiveScenarioId(scenario.id)}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm border transition-colors ${activeScenarioId === scenario.id ? 'text-white shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                  style={activeScenarioId === scenario.id ? { backgroundColor: ARAD_BLUE, borderColor: ARAD_BLUE } : {}}
-                >
-                  {scenario.title}
-                </button>
-              ))}
-              {isEditor && <button onClick={handleAddScenario} className="px-3 py-2 text-gray-400 bg-white border border-dashed border-gray-300 rounded-lg hover:text-blue-600 hover:border-blue-400 transition-colors"><Plus size={16} /></button>}
-            </div>
-
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                {isEditor && <button onClick={() => handleDeleteScenario(activeScenarioId)} className="p-1 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50"><Trash2 size={18} /></button>}
-              </div>
-              <input type="text" value={activeScenario?.title || ''} onChange={(e) => updateScenarioMeta('title', e.target.value)} disabled={!isEditor} className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1" placeholder="Titolo Scenario" />
-              <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione strategica per questo scenario..." disabled={!isEditor} />
-            </div>
-          </div>
+        
+        {/* LIVELLO 0: MASTER ROADMAP */}
+        {appMode === 'master' && (
+            <MasterRoadmapView onSelectPhase={handleSelectPhase} />
         )}
 
-        <div className="flex gap-6 items-start relative">
-          <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />
-          
-          <div className="flex-grow min-w-0 transition-all duration-300">
-            {activeView === 'dashboard' ? (
-              <Dashboard activeScenario={activeScenario} setActiveView={setActiveView} updateProjectBatch={handleBatchUpdateProject} isEditor={isEditor} />
-            ) : (
-              <AreaEditor
-                activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
-                updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
-                updateKSM={updateKSM} isEditor={isEditor}
-              />
-            )}
-          </div>
-        </div>
+        {/* LIVELLO 1: DETTAGLIO SCENARIO (Visibile solo dopo il click) */}
+        {appMode === 'scenario' && (
+            <>
+                {/* Header dello scenario selezionato */}
+                <div className="mb-8">
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Scenario in visione</span>
+                        <input type="text" value={activeScenario?.title || ''} onChange={(e) => updateScenarioMeta('title', e.target.value)} disabled={!isEditor} className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1" placeholder="Titolo Scenario" />
+                        <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione strategica per questo scenario..." disabled={!isEditor} />
+                    </div>
+                </div>
+
+                <div className="flex gap-6 items-start relative">
+                    <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />
+                    
+                    <div className="flex-grow min-w-0 transition-all duration-300">
+                        {activeView === 'dashboard' ? (
+                            <Dashboard activeScenario={activeScenario} setActiveView={setActiveView} updateProjectBatch={handleBatchUpdateProject} isEditor={isEditor} />
+                        ) : (
+                            <AreaEditor
+                                activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
+                                updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
+                                updateKSM={updateKSM} isEditor={isEditor}
+                            />
+                        )}
+                    </div>
+                </div>
+            </>
+        )}
       </main>
     </div>
   );
