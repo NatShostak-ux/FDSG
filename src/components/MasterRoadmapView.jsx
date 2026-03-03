@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 
 const MASTER_COLORS = {
-  p1: '#0f172a', // Slate 900
-  push: '#b91c1c', // Red 700
-  pull: '#1d4ed8', // Blue 700
+  p1: '#0f172a',   // Slate 900
+  push: '#8B3A20', // Nuovo colore Conversione (C)
+  pull: '#78A48C', // Nuovo colore Editorialità (B)
   gold: '#bf9000'  // Arad Gold
 };
 
