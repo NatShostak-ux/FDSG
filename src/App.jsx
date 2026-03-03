@@ -5,7 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import AreaEditor from './components/AreaEditor';
 import AdvancedEditor from './components/AdvancedEditor';
-import MasterRoadmapView from './components/MasterRoadmapView'; // IMPORT DEL NUOVO COMPONENTE
+import MasterRoadmapView from './components/MasterRoadmapView'; 
 import { ARAD_BLUE, ARAD_GOLD, INITIAL_SCENARIOS, EMPTY_AREA_DATA, EXPERTISE_AREAS } from './utils/constants';
 import { auth, db, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -21,7 +21,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isEditor, setIsEditor] = useState(false);
   
-  // NUOVO STATO: Gestisce la visualizzazione Livello 0 vs Livello 1
   const [appMode, setAppMode] = useState('master'); // 'master' | 'scenario'
 
   useEffect(() => {
@@ -56,25 +55,30 @@ function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // FUNZIONE DI COLLEGAMENTO ROADMAP -> SCENARIO
+  // NAVIGAZIONE: DA MASTER A SCENARIO
   const handleSelectPhase = (phaseId) => {
-    if (scenarios.length < 3) return; // Sicurezza
+    if (scenarios.length < 3) return; 
 
     let targetScenarioId = null;
-    
-    // Logica di instradamento basata sull'ordine degli scenari nel DB
-    // phaseId 1 = Fase 1 -> Scenario 3 (indice 2)
-    // phaseId 2 = Fase 2A -> Scenario 2 (indice 1)
-    // phaseId 3 = Fase 2B -> Scenario 1 (indice 0)
     if (phaseId === 1) targetScenarioId = scenarios[2]?.id;
     if (phaseId === 2) targetScenarioId = scenarios[1]?.id;
     if (phaseId === 3) targetScenarioId = scenarios[0]?.id;
 
     if (targetScenarioId) {
         setActiveScenarioId(targetScenarioId);
-        setActiveView('dashboard'); // Resetta la vista alla dashboard dello scenario
-        setAppMode('scenario'); // Entra nel Livello 1
+        setActiveView('dashboard'); 
+        setAppMode('scenario'); 
+        
+        // FIX SCROLL: Riporta l'utente in cima alla pagina!
+        window.scrollTo(0, 0);
     }
+  };
+
+  // NAVIGAZIONE: TASTO INDIETRO
+  const handleBackToMaster = () => {
+      setAppMode('master');
+      // FIX SCROLL: Riporta l'utente in cima alla pagina quando torna indietro!
+      window.scrollTo(0, 0);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
@@ -160,7 +164,7 @@ function App() {
             {/* Tasto Indietro o Testo Standard */}
             {appMode === 'scenario' ? (
                 <button 
-                    onClick={() => setAppMode('master')} 
+                    onClick={handleBackToMaster} 
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-gray-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                 >
                     <ArrowLeft size={18} /> Torna alla Roadmap Strategica
@@ -184,15 +188,14 @@ function App() {
 
       <main className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50">
         
-        {/* LIVELLO 0: MASTER ROADMAP */}
-        {appMode === 'master' && (
+        {/* LIVELLO 0: MASTER ROADMAP (Nascosto via CSS se siamo in uno scenario per non perdere lo stato) */}
+        <div className={appMode === 'master' ? 'block' : 'hidden'}>
             <MasterRoadmapView onSelectPhase={handleSelectPhase} />
-        )}
+        </div>
 
-        {/* LIVELLO 1: DETTAGLIO SCENARIO (Visibile solo dopo il click) */}
+        {/* LIVELLO 1: DETTAGLIO SCENARIO */}
         {appMode === 'scenario' && (
-            <>
-                {/* Header dello scenario selezionato */}
+            <div className="animate-fadeIn">
                 <div className="mb-8">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Scenario in visione</span>
@@ -216,7 +219,7 @@ function App() {
                         )}
                     </div>
                 </div>
-            </>
+            </div>
         )}
       </main>
     </div>
