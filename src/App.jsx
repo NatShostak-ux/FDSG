@@ -158,7 +158,7 @@ function App() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold tracking-tight" style={{ color: ARAD_BLUE }}>ARAD <span style={{ color: ARAD_GOLD }}>Digital</span></span>
+            <img src="/arad-logo.png" alt="ARAD Digital" className="h-10 w-auto object-contain" />
             <div className="h-6 w-px bg-gray-300"></div>
             
             {/* Tasto Indietro o Testo Standard */}
