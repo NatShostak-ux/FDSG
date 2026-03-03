@@ -58,9 +58,10 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
           <div className="text-[10px] tracking-[4px] uppercase text-gray-400 mb-3 font-bold">
             Feudi di San Gregorio · D2C Strategy
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-            Modulo 2: 3 Principi Chiave
-          </h1>
+         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+  <span className="block">Modulo 2:</span>
+  <span className="block">3 Principi Chiave</span>
+</h1>
           <div className="w-16 h-1 mx-auto rounded-full" style={{ backgroundColor: MASTER_COLORS.gold }}></div>
         </div>
 
