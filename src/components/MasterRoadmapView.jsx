@@ -13,13 +13,13 @@ const ARAD_CHART_BG = '#081f32';
 
 // Dati per il breakdown interattivo della Fase 1
 const PHASE_1_BREAKDOWN = [
-  { id: 'ux', area: 'UXD', color: '#9333ea', title: 'Ristrutturazione completa navigazione ecom', desc: "Riorganizza categorie, menu e percorsi di acquisto per ridurre l'abbandono e aumentare la profondità di visita." },
+  { id: 'ux', area: 'UXD', color: '#9333ea', title: 'Ristrutturazione completa navigazione e-commerce', desc: "Riorganizza categorie, menu e percorsi di acquisto per ridurre l'abbandono e aumentare la profondità di visita." },
   { id: 'seo', area: 'SEO', color: '#16a34a', title: 'Consolidamento domini e authority (EEAT)', desc: "Unifica i domini esistenti e ottimizza i contenuti per i segnali di autorevolezza che Google premia nel settore food & wine." },
-  { id: 'loyalty', area: 'LOY', color: '#db2777', title: 'Lancio subscription box', desc: "Introduce un prodotto in abbonamento ricorrente come primo meccanismo di fidelizzazione attiva." },
+  { id: 'loyalty', area: 'LOY', color: '#db2777', title: 'Lancio subscription box (Coffret de Curiosités)', desc: "Introduce un prodotto in abbonamento ricorrente come primo meccanismo di fidelizzazione attiva." },
   { id: 'crm', area: 'CRM', color: '#0891b2', title: 'Attivazione Welcome series', desc: "Configura il flusso email automatico post-registrazione per attivare i nuovi contatti verso il primo acquisto." },
-  { id: 'ecommerce', area: 'ECM', color: '#2563eb', title: 'Nuovo checkout ottimizzato per CR', desc: "Ridisegna il processo di acquisto riducendo gli step, ottimizzando i pagamenti e abbattendo il tasso di abbandono carrello." },
-  { id: 'distribution', area: 'MRK', color: '#d97706', title: 'Setup AMZ Corner e Vivino Verified', desc: "Attiva e presidia i profili di vendita su Amazon e Vivino per intercettare domanda già esistente fuori dal sito." },
-  { id: 'social', area: 'SOC', color: '#dc2626', title: 'Avvio social commerce exp. e gift card', desc: "Abilita l'acquisto diretto dai canali social e lancia il prodotto gift card come leva di acquisizione." }
+  { id: 'ecommerce', area: 'ECM', color: '#2563eb', title: 'Nuovo checkout ottimizzato per Convertion Rate', desc: "Ridisegna il processo di acquisto riducendo gli step, ottimizzando i pagamenti e abbattendo il tasso di abbandono carrello." },
+  { id: 'distribution', area: 'MRK', color: '#d97706', title: 'Setup Amazon Corner e Vivino Verified', desc: "Attiva e presidia i profili di vendita su Amazon e Vivino per intercettare domanda già esistente fuori dal sito." },
+  { id: 'social', area: 'SOC', color: '#dc2626', title: 'Avvio social commerce experience e gift card', desc: "Abilita l'acquisto diretto dai canali social e lancia il prodotto gift card come leva di acquisizione." }
 ];
 
 const Badge = ({ color, children }) => (
