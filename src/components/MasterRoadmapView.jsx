@@ -282,46 +282,49 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                 className="mt-5 ml-6 relative animate-fadeIn"
                                 onClick={(e) => e.stopPropagation()} 
                             >
-                                {/* Linea verticale principale dell'albero */}
-                                <div className="absolute left-0 top-3 bottom-0 w-px bg-gray-300 z-0"></div>
+                                {/* Blocco Iniziative - Separato in un container per gestire la linea verticale */}
+                                <div className="relative">
+                                    {/* Linea verticale principale dell'albero - Si ferma ESATTAMENTE in fondo a questo blocco */}
+                                    <div className="absolute left-0 top-3 bottom-0 w-px bg-gray-300 z-0"></div>
 
-                                {/* LE 7 INIZIATIVE */}
-                                {PHASE_1_BREAKDOWN.map((item) => (
-                                    <div key={item.id} className="relative flex items-center justify-between gap-3 pl-8 mb-5 group/item z-10">
-                                        <div className="flex items-center gap-3">
-                                            {/* Ramo orizzontale e pallino */}
-                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-px bg-gray-300"></div>
-                                            <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                            
-                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm ml-1" style={{ backgroundColor: item.color }}>
-                                                {item.area}
-                                            </span>
-                                            <span className="text-sm font-medium text-gray-700">{item.title}</span>
+                                    {/* LE 7 INIZIATIVE */}
+                                    {PHASE_1_BREAKDOWN.map((item) => (
+                                        <div key={item.id} className="relative flex items-center justify-between gap-3 pl-8 mb-5 group/item z-10">
+                                            <div className="flex items-center gap-3">
+                                                {/* Ramo orizzontale e pallino */}
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-px bg-gray-300"></div>
+                                                <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                                                
+                                                <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm ml-1" style={{ backgroundColor: item.color }}>
+                                                    {item.area}
+                                                </span>
+                                                <span className="text-sm font-medium text-gray-700">{item.title}</span>
+                                            </div>
+                                            <div 
+                                                className="relative flex items-center ml-2 flex-shrink-0"
+                                                onMouseEnter={() => setActiveTooltip(item.id)}
+                                                onMouseLeave={() => setActiveTooltip(null)}
+                                            >
+                                                <Info size={14} className="text-gray-400 hover:text-slate-800 cursor-help transition-colors" />
+                                                
+                                                {/* TOOLTIP OVERLAY */}
+                                                {activeTooltip === item.id && (
+                                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
+                                                        <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-r border-t border-gray-100 rotate-45"></div>
+                                                        {item.desc}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div 
-                                            className="relative flex items-center ml-2 flex-shrink-0"
-                                            onMouseEnter={() => setActiveTooltip(item.id)}
-                                            onMouseLeave={() => setActiveTooltip(null)}
-                                        >
-                                            <Info size={14} className="text-gray-400 hover:text-slate-800 cursor-help transition-colors" />
-                                            
-                                            {/* TOOLTIP OVERLAY */}
-                                            {activeTooltip === item.id && (
-                                                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
-                                                    <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-r border-t border-gray-100 rotate-45"></div>
-                                                    {item.desc}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
 
-                                {/* ABILITATORI TRASVERSALI (UI Pulita ad Angolo Retto) */}
+                                {/* ABILITATORI TRASVERSALI (Nuova UI per Angolo Retto - SENZA hack bianchi) */}
                                 <div className="relative flex items-start pl-8 mt-8 pb-2 z-10">
+                                    {/* Segmento verticale che collega il blocco sopra all'angolo */}
+                                    <div className="absolute left-0 -top-8 h-[42px] w-px bg-gray-300 z-0"></div>
                                     {/* Ramo Orizzontale per Abilitatori ad angolo retto */}
-                                    <div className="absolute left-0 top-2.5 w-6 h-px bg-gray-300"></div>
-                                    {/* Toppa bianca per tagliare la linea verticale e formare l'angolo perfetto */}
-                                    <div className="absolute -left-[2px] top-[11px] bottom-[-50px] w-1 bg-white z-0"></div>
+                                    <div className="absolute left-0 top-[10px] w-6 h-px bg-gray-300 z-0"></div>
                                     
                                     <div className="w-full relative z-10">
                                         <span className="text-[12px] tracking-[2px] font-bold text-slate-500 uppercase leading-none">
