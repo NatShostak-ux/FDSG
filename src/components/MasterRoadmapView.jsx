@@ -405,7 +405,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </div>
 
                     <p className="text-sm italic text-gray-500 text-center max-w-md mx-auto mt-12 mb-8 leading-relaxed font-serif" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                        "La decisione sulla traiettoria sarà loro, sulla base dell'ambizione che vorranno esprimere."
+                        "La decisione sulla traiettoria sarà basata sull'ambizione che Feudi di San Gregorio vorrà esprimere."
                     </p>
 
                     <div className="text-center">
