@@ -48,7 +48,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
   // Stati per l'interazione
   const [showPhase1Tree, setShowPhase1Tree] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState(null);
-  const [showFuture, setShowFuture] = useState(false); // Nuovo stato per il bottone IL FUTURO
+  const [showFuture, setShowFuture] = useState(false);
 
   const run = () => {
     setStep(0);
@@ -63,7 +63,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
     run();
   };
 
-  // Funzione attivata dal click su IL FUTURO
   const revealFuture = () => {
     setShowFuture(true);
     // Fa partire gli step successivi (dal 4 all'8)
@@ -76,7 +75,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 animate-fadeIn pb-24">
       
-      {/* SEZIONE 1: I 3 PRINCIPI CHIAVE (INTERATTIVA) */}
+      {/* SEZIONE 1: I 3 PRINCIPI CHIAVE */}
       <div className="mb-24 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-100/40 to-transparent rounded-[3rem] -z-10 transform scale-105 pointer-events-none"></div>
 
@@ -277,12 +276,13 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                             </div>
                         </div>
 
-                        {/* ALBERO INTERATTIVO */}
+                        {/* ALBERO INTERATTIVO CON ABILITATORI */}
                         {showPhase1Tree && (
                             <div 
                                 className="mt-2 ml-4 pl-4 border-l-2 border-gray-200 flex flex-col gap-3 animate-fadeIn relative z-10"
                                 onClick={(e) => e.stopPropagation()} 
                             >
+                                {/* LE 7 INIZIATIVE */}
                                 {PHASE_1_BREAKDOWN.map((item) => (
                                     <div key={item.id} className="flex items-center justify-between gap-3 relative group/item">
                                         <div className="flex items-center gap-3">
@@ -309,6 +309,41 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* ABILITATORI TRASVERSALI (Senza icone, 3 colonne) */}
+                                <div className="relative mt-8">
+                                    <div className="absolute -left-4 top-0 h-4 w-px bg-gray-200"></div>
+                                    <div className="absolute -left-4 top-4 w-4 h-px bg-gray-200"></div>
+                                    
+                                    <div className="ml-2">
+                                        <span className="text-[10px] tracking-widest font-bold text-gray-400 uppercase bg-white px-2 relative -left-2">
+                                            Abilitatori Trasversali
+                                        </span>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                                                <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-2">Logistica</div>
+                                                <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                    Regole di segregazione per one pool inventory, pop-up WH presso i corrieri
+                                                </p>
+                                            </div>
+                                            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                                                <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-2">Organizzazione</div>
+                                                <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                    Selezione digital marketing/SEO/GEO agency, piano di recruiting interno
+                                                </p>
+                                            </div>
+                                            <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
+                                                <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-2">Tecnologia</div>
+                                                <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                    Selezione e integrazione nuovo tech-stack (e-com, CRM, Marketing automation, ecc.)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Fine Abilitatori */}
+                                
                             </div>
                         )}
                     </div>
@@ -331,7 +366,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         </button>
                         <div className="flex-1 h-px bg-gray-200"></div>
                     </div>
-                    {/* Freccia che rimbalza per suggerire il click */}
                     {!showFuture && (
                         <div className="text-gray-300 animate-bounce mt-4">
                             <ChevronDown size={24} />
@@ -339,13 +373,11 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     )}
                 </div>
             )}
-
-            {/* DA QUI IN POI, TUTTO APPARE SOLO SE HAI CLICCATO "IL FUTURO" */}
             
-            {/* STEP 4: INTRO TEXT */}
+            {/* STEP 4: INTRO TEXT EVOLUZIONE */}
             {s(4) && (
                 <p className="text-sm font-medium text-gray-500 leading-relaxed text-center max-w-lg mx-auto mt-8 mb-8 animate-fadeIn" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
-                    A quel punto si apre una scelta strategica. La strada per continuare a crescere segue la direttrice della <strong className="text-gray-800 font-bold">conversione assistita</strong>, declinabile in due modi distinti.
+                    Raggiunta l'eccellenza nell'esecuzione, è il momento di scegliere l'evoluzione futura. La strada per continuare a crescere segue la direttrice della <strong className="text-gray-800 font-bold">conversione assistita</strong>, declinabile in due modi distinti.
                 </p>
             )}
 
@@ -363,7 +395,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
 
             {/* STEP 6 & 7: PUSH + PULL CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
-                {/* PUSH CARD */}
                 {s(6) ? (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
@@ -386,7 +417,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </div>
                 ) : <div></div>}
 
-                {/* PULL CARD */}
                 {s(7) && (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
