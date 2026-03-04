@@ -11,13 +11,13 @@ const MASTER_COLORS = {
 const ARAD_GOLD = '#bf9000';
 const ARAD_CHART_BG = '#081f32';
 
-// Dati per il breakdown interattivo della Fase 1
+// Dati aggiornati con i nuovi titoli per il breakdown interattivo della Fase 1
 const PHASE_1_BREAKDOWN = [
   { id: 'ux', area: 'UXD', color: '#9333ea', title: 'Ristrutturazione completa navigazione e-commerce', desc: "Riorganizza categorie, menu e percorsi di acquisto per ridurre l'abbandono e aumentare la profondità di visita." },
   { id: 'seo', area: 'SEO', color: '#16a34a', title: 'Consolidamento domini e authority (EEAT)', desc: "Unifica i domini esistenti e ottimizza i contenuti per i segnali di autorevolezza che Google premia nel settore food & wine." },
   { id: 'loyalty', area: 'LOY', color: '#db2777', title: 'Lancio subscription box (Coffret de Curiosités)', desc: "Introduce un prodotto in abbonamento ricorrente come primo meccanismo di fidelizzazione attiva." },
   { id: 'crm', area: 'CRM', color: '#0891b2', title: 'Attivazione Welcome series', desc: "Configura il flusso email automatico post-registrazione per attivare i nuovi contatti verso il primo acquisto." },
-  { id: 'ecommerce', area: 'ECM', color: '#2563eb', title: 'Nuovo checkout ottimizzato per Convertion Rate', desc: "Ridisegna il processo di acquisto riducendo gli step, ottimizzando i pagamenti e abbattendo il tasso di abbandono carrello." },
+  { id: 'ecommerce', area: 'ECM', color: '#2563eb', title: 'Nuovo checkout ottimizzato per Conversion Rate', desc: "Ridisegna il processo di acquisto riducendo gli step, ottimizzando i pagamenti e abbattendo il tasso di abbandono carrello." },
   { id: 'distribution', area: 'MRK', color: '#d97706', title: 'Setup Amazon Corner e Vivino Verified', desc: "Attiva e presidia i profili di vendita su Amazon e Vivino per intercettare domanda già esistente fuori dal sito." },
   { id: 'social', area: 'SOC', color: '#dc2626', title: 'Avvio social commerce experience e gift card', desc: "Abilita l'acquisto diretto dai canali social e lancia il prodotto gift card come leva di acquisizione." }
 ];
@@ -245,7 +245,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </p>
                     
                     {/* ZONA TARGET & BREAKDOWN ALBERO */}
-                    <div className="flex flex-col gap-5 mt-8">
+                    <div className="flex flex-col gap-5 mt-8 relative">
                         <div className="flex items-center justify-between relative z-20">
                             <button
                                 onClick={(e) => {
@@ -268,40 +268,29 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         {/* ALBERO INTERATTIVO (Espandibile) */}
                         {showPhase1Tree && (
                             <div 
-                                className="mt-2 ml-4 relative flex flex-col gap-4 animate-fadeIn"
+                                className="mt-2 ml-4 pl-4 border-l-2 border-gray-200 flex flex-col gap-3 animate-fadeIn relative z-10"
                                 onClick={(e) => e.stopPropagation()} // Cliccare l'albero non fa entrare nello scenario
                             >
-                                {/* Linea verticale principale dell'albero */}
-                                <div className="absolute left-[3.5px] top-2 bottom-2 w-px bg-gray-200"></div>
-
                                 {PHASE_1_BREAKDOWN.map((item) => (
-                                    <div key={item.id} className="flex items-center relative z-10 group/item">
-                                        
-                                        {/* Pallino + Ramo Orizzontale */}
-                                        <div className="w-8 flex items-center justify-between flex-shrink-0">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                            <div className="w-5 h-px bg-gray-200"></div>
+                                    <div key={item.id} className="flex items-center justify-between gap-3 relative group/item">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-px bg-gray-200"></div>
+                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: item.color }}>
+                                                {item.area}
+                                            </span>
+                                            <span className="text-sm font-medium text-gray-700">{item.title}</span>
                                         </div>
-
-                                        {/* Tag Area */}
-                                        <span className="text-[10px] font-bold text-white px-2 py-0.5 ml-2 rounded flex-shrink-0 shadow-sm text-center min-w-[36px]" style={{ backgroundColor: item.color }}>
-                                            {item.area}
-                                        </span>
-                                        
-                                        {/* Titolo */}
-                                        <span className="text-sm font-medium text-gray-800 ml-3">{item.title}</span>
-                                        
-                                        {/* Icona Info (i) Elegante + Tooltip Bianco */}
                                         <div 
-                                            className="relative flex items-center ml-2"
+                                            className="relative flex items-center ml-2 flex-shrink-0"
                                             onMouseEnter={() => setActiveTooltip(item.id)}
                                             onMouseLeave={() => setActiveTooltip(null)}
                                         >
-                                            <Info size={15} className="text-gray-300 hover:text-gray-500 cursor-help transition-colors" />
+                                            <Info size={14} className="text-gray-400 hover:text-slate-800 cursor-help transition-colors" />
                                             
-                                            {/* TOOLTIP BIANCO OVERLAY */}
+                                            {/* TOOLTIP OVERLAY - Posizionato a sinistra per evitare sovrapposizioni */}
                                             {activeTooltip === item.id && (
-                                                <div className="absolute left-8 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
+                                                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
+                                                    <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-r border-t border-gray-100 rotate-45"></div>
                                                     {item.desc}
                                                 </div>
                                             )}
