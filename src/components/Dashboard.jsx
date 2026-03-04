@@ -8,6 +8,10 @@ import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
 import { STRATEGIC_ROLES, getStrategicRole } from './AreaEditor';
 
+// === INTERRUTTORE FEATURE FLAG ===
+// Cambia questo valore in 'true' quando vorrai mostrare di nuovo le card Budget e Lista Progetti
+const SHOW_FINANCIALS_AND_LIST = false; 
+
 const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     const [isProjectPreviewOpen, setIsProjectPreviewOpen] = useState(false);
 
@@ -85,25 +89,28 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <div className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Budget Stimato Totale (Bottom-Up)</div>
-                        <div className="text-2xl font-bold" style={{ color: ARAD_BLUE }}>
-                            € {budgetRange.min.toLocaleString('it-IT')} - {budgetRange.max.toLocaleString('it-IT')}
+            {/* SEZIONE NASCOSTA TRAMITE FEATURE FLAG */}
+            {SHOW_FINANCIALS_AND_LIST && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <div className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Budget Stimato Totale (Bottom-Up)</div>
+                            <div className="text-2xl font-bold" style={{ color: ARAD_BLUE }}>
+                                € {budgetRange.min.toLocaleString('it-IT')} - {budgetRange.max.toLocaleString('it-IT')}
+                            </div>
                         </div>
+                        <div className="p-3 rounded-full" style={{ backgroundColor: `${ARAD_GOLD}20`, color: ARAD_GOLD }}><Euro size={24} /></div>
                     </div>
-                    <div className="p-3 rounded-full" style={{ backgroundColor: `${ARAD_GOLD}20`, color: ARAD_GOLD }}><Euro size={24} /></div>
-                </div>
-                
-                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow group" onClick={() => setIsProjectPreviewOpen(true)}>
-                    <div>
-                        <div className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1 group-hover:text-blue-600 transition-colors">Progetti in Roadmap</div>
-                        <div className="text-3xl font-bold text-gray-800">{allProjects.length}</div>
+                    
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow group" onClick={() => setIsProjectPreviewOpen(true)}>
+                        <div>
+                            <div className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1 group-hover:text-blue-600 transition-colors">Progetti in Roadmap</div>
+                            <div className="text-3xl font-bold text-gray-800">{allProjects.length}</div>
+                        </div>
+                        <div className="p-3 rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: `${ARAD_BLUE}20`, color: ARAD_BLUE }}><List size={24} /></div>
                     </div>
-                    <div className="p-3 rounded-full group-hover:scale-110 transition-transform" style={{ backgroundColor: `${ARAD_BLUE}20`, color: ARAD_BLUE }}><List size={24} /></div>
                 </div>
-            </div>
+            )}
 
             <Card title="Analisi Pesi Strategici" icon={TrendingUp}>
                 <div className="flex flex-col lg:flex-row gap-10 items-center">
