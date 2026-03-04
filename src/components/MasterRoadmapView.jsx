@@ -11,7 +11,7 @@ const MASTER_COLORS = {
 const ARAD_GOLD = '#bf9000';
 const ARAD_CHART_BG = '#081f32';
 
-// Dati aggiornati con i nuovi titoli per il breakdown interattivo della Fase 1
+// Dati aggiornati per il breakdown interattivo dell'esecuzione
 const PHASE_1_BREAKDOWN = [
   { id: 'ux', area: 'UXD', color: '#9333ea', title: 'Ristrutturazione completa navigazione e-commerce', desc: "Riorganizza categorie, menu e percorsi di acquisto per ridurre l'abbandono e aumentare la profondità di visita." },
   { id: 'seo', area: 'SEO', color: '#16a34a', title: 'Consolidamento domini e authority (EEAT)', desc: "Unifica i domini esistenti e ottimizza i contenuti per i segnali di autorevolezza che Google premia nel settore food & wine." },
@@ -45,19 +45,30 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [activeNode, setActiveNode] = useState(null);
   
-  // Stati per l'interazione della Fase 1
+  // Stati per l'interazione
   const [showPhase1Tree, setShowPhase1Tree] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  const [showFuture, setShowFuture] = useState(false); // Nuovo stato per il bottone IL FUTURO
 
   const run = () => {
     setStep(0);
-    const delays = [150, 800, 1500, 2100, 2700, 3300, 3900];
+    setShowFuture(false);
+    // L'animazione iniziale si ferma allo step 3 (Bottone Il Futuro)
+    const delays = [150, 800, 1500];
     delays.forEach((d, i) => setTimeout(() => setStep(i + 1), d));
   };
 
   const startRoadmap = () => {
     setShowRoadmap(true);
     run();
+  };
+
+  // Funzione attivata dal click su IL FUTURO
+  const revealFuture = () => {
+    setShowFuture(true);
+    // Fa partire gli step successivi (dal 4 all'8)
+    const delays = [150, 750, 1350, 1950, 2550];
+    delays.forEach((d, i) => setTimeout(() => setStep(4 + i), d));
   };
 
   const s = (n) => step >= n;
@@ -168,7 +179,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                      Editorialità
                  </h3>
                  <p className="text-sm text-gray-600 leading-relaxed font-light">
-                     Il contenuto come canale di acquisizione e retention. Feudi di San Gregorio ha un patrimonio culturale - territorio, vitigni, storia - che nessun competitor può replicare. Trasformare questo asset in contenuto significa costruire autorevolezza, intercettare domanda latente e ridurre la dipendenza dal marketing spend.
+                     Il contenuto come canale di acquisizione e retention. Feudi di San Gregorio ha un patrimonio culturale — territorio, vitigni, storia — che nessun competitor può replicare. Trasformarlo in contenuto autorevole significa intercettare domanda latente, costruire autorevolezza e ridurre la dipendenza dalla pubblicità a pagamento.
                  </p>
              </div>
 
@@ -185,7 +196,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                      Conversione assistita
                  </h3>
                  <p className="text-sm text-gray-600 leading-relaxed font-light">
-                     Un sistema che accompagna l'utente dalla scoperta all'acquisto - attraverso raccomandazioni personalizzate, un sommelier digitale che apprende nel tempo, o entrambi - trasformando ogni visita in una conversazione e ogni conversazione in una relazione.
+                     Un sistema che accompagna l'utente dalla scoperta all'acquisto — attraverso raccomandazioni personalizzate, un sommelier digitale che apprende nel tempo, o entrambi — trasformando ogni visita in una conversazione e ogni conversazione in una relazione.
                  </p>
              </div>
           </div>
@@ -215,6 +226,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
       {showRoadmap && (
           <div className="mt-8 pt-8 animate-fadeIn max-w-3xl mx-auto">
             
+            {/* STEP 1 */}
             {s(1) && (
                 <div className="flex justify-center animate-fadeIn">
                     <div className="flex items-center gap-2 text-white text-[10px] tracking-widest font-bold px-5 py-2 rounded-full shadow-md" style={{ backgroundColor: MASTER_COLORS.p1 }}>
@@ -226,7 +238,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
 
             <VConnector color={MASTER_COLORS.p1} height={40} visible={s(1)} />
 
-            {/* STEP 2: FASE 1 CARD */}
+            {/* STEP 2: CARD BASE */}
             {s(2) && (
                 <div 
                     className="bg-white border border-gray-200 border-l-4 rounded-xl rounded-l-none p-8 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group animate-fadeIn" 
@@ -234,14 +246,14 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     onClick={() => onSelectPhase(1)} 
                 >
                     <div className="flex items-center gap-3 mb-4">
-                        <Badge color={MASTER_COLORS.p1}>FASE 1 (A)</Badge>
+                        <Badge color={MASTER_COLORS.p1}>ESECUZIONE (A)</Badge>
                         <span className="text-[11px] text-gray-400 font-bold tracking-wider uppercase">0 → 12 mesi</span>
                     </div>
                     <div className="text-2xl font-bold mb-3" style={{ color: MASTER_COLORS.p1, fontFamily: "'Cormorant Garamond', serif" }}>
                         Road to Excellence
                     </div>
                     <p className="text-sm font-medium text-gray-600 leading-relaxed mb-6 max-w-xl">
-                        Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali - costruendo una macchina di conversione solida su fondamenta sane.
+                        Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali — costruendo una macchina di conversione solida su fondamenta sane.
                     </p>
                     
                     {/* ZONA TARGET & BREAKDOWN ALBERO */}
@@ -249,7 +261,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         <div className="flex items-center justify-between relative z-20">
                             <button
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Evita di entrare nello scenario
+                                    e.stopPropagation(); 
                                     setShowPhase1Tree(!showPhase1Tree);
                                 }}
                                 className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
@@ -265,11 +277,11 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                             </div>
                         </div>
 
-                        {/* ALBERO INTERATTIVO (Espandibile) */}
+                        {/* ALBERO INTERATTIVO */}
                         {showPhase1Tree && (
                             <div 
                                 className="mt-2 ml-4 pl-4 border-l-2 border-gray-200 flex flex-col gap-3 animate-fadeIn relative z-10"
-                                onClick={(e) => e.stopPropagation()} // Cliccare l'albero non fa entrare nello scenario
+                                onClick={(e) => e.stopPropagation()} 
                             >
                                 {PHASE_1_BREAKDOWN.map((item) => (
                                     <div key={item.id} className="flex items-center justify-between gap-3 relative group/item">
@@ -287,7 +299,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                         >
                                             <Info size={14} className="text-gray-400 hover:text-slate-800 cursor-help transition-colors" />
                                             
-                                            {/* TOOLTIP OVERLAY - Posizionato a sinistra per evitare sovrapposizioni */}
+                                            {/* TOOLTIP OVERLAY */}
                                             {activeTooltip === item.id && (
                                                 <div className="absolute right-6 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
                                                     <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-r border-t border-gray-100 rotate-45"></div>
@@ -303,43 +315,62 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                 </div>
             )}
 
-            <VConnector color={MASTER_COLORS.p1} height={52} visible={s(2)} />
+            <VConnector color={MASTER_COLORS.p1} height={52} visible={s(3)} />
 
+            {/* STEP 3: IL FUTURO (BOTTONE) */}
             {s(3) && (
-                <div className="flex items-center gap-4 animate-fadeIn">
-                    <div className="flex-1 h-px bg-gray-200"></div>
-                    <div className="text-white text-[10px] tracking-[2.5px] font-bold px-5 py-2 rounded shadow-md" style={{ backgroundColor: MASTER_COLORS.gold }}>
-                        SCELTA STRATEGICA — FASE 2
+                <div className="flex flex-col items-center animate-fadeIn">
+                    <div className="flex items-center gap-4 w-full">
+                        <div className="flex-1 h-px bg-gray-200"></div>
+                        <button 
+                            onClick={!showFuture ? revealFuture : undefined}
+                            className={`text-white text-[11px] tracking-[3px] font-bold px-8 py-3 rounded shadow-md transition-all duration-300 ${!showFuture ? 'cursor-pointer hover:scale-105 hover:bg-yellow-600' : 'opacity-60 cursor-default ring-2 ring-offset-2 ring-gray-200'}`} 
+                            style={{ backgroundColor: MASTER_COLORS.gold }}
+                        >
+                            IL FUTURO
+                        </button>
+                        <div className="flex-1 h-px bg-gray-200"></div>
                     </div>
-                    <div className="flex-1 h-px bg-gray-200"></div>
+                    {/* Freccia che rimbalza per suggerire il click */}
+                    {!showFuture && (
+                        <div className="text-gray-300 animate-bounce mt-4">
+                            <ChevronDown size={24} />
+                        </div>
+                    )}
                 </div>
             )}
 
-            {s(3) && (
-                <p className="text-sm font-medium text-gray-500 leading-relaxed text-center max-w-lg mx-auto mt-6 mb-8 animate-fadeIn" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+            {/* DA QUI IN POI, TUTTO APPARE SOLO SE HAI CLICCATO "IL FUTURO" */}
+            
+            {/* STEP 4: INTRO TEXT */}
+            {s(4) && (
+                <p className="text-sm font-medium text-gray-500 leading-relaxed text-center max-w-lg mx-auto mt-8 mb-8 animate-fadeIn" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
                     A quel punto si apre una scelta strategica. La strada per continuare a crescere segue la direttrice della <strong className="text-gray-800 font-bold">conversione assistita</strong>, declinabile in due modi distinti.
                 </p>
             )}
 
-            <div className={`flex transition-all duration-700 ${s(4) ? 'opacity-100' : 'opacity-0'}`}>
+            {/* STEP 5: FORK ARMS */}
+            <div className={`flex transition-all duration-700 ${s(5) ? 'opacity-100' : 'opacity-0'}`}>
                 <div className="flex-1 flex flex-col items-center">
-                    <div className="w-0.5 rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.push, height: s(4) ? 32 : 0 }}></div>
-                    <div className="h-0.5 self-end rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.push, width: s(4) ? '50%' : 0 }}></div>
+                    <div className="w-0.5 rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.push, height: s(5) ? 32 : 0 }}></div>
+                    <div className="h-0.5 self-end rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.push, width: s(5) ? '50%' : 0 }}></div>
                 </div>
                 <div className="flex-1 flex flex-col items-center">
-                    <div className="w-0.5 rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.pull, height: s(4) ? 32 : 0 }}></div>
-                    <div className="h-0.5 self-start rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.pull, width: s(4) ? '50%' : 0 }}></div>
+                    <div className="w-0.5 rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.pull, height: s(5) ? 32 : 0 }}></div>
+                    <div className="h-0.5 self-start rounded-full transition-all duration-700" style={{ backgroundColor: MASTER_COLORS.pull, width: s(5) ? '50%' : 0 }}></div>
                 </div>
             </div>
 
+            {/* STEP 6 & 7: PUSH + PULL CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
-                {s(5) ? (
+                {/* PUSH CARD */}
+                {s(6) ? (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
                         style={{ borderTopColor: MASTER_COLORS.push }}
                         onClick={() => onSelectPhase(2)} 
                     >
-                        <div className="mb-4"><Badge color={MASTER_COLORS.push}>FASE 2A · PUSH (C)</Badge></div>
+                        <div className="mb-4"><Badge color={MASTER_COLORS.push}>TRAIETTORIA PUSH (C)</Badge></div>
                         <div className="text-xl font-bold mb-3" style={{ color: MASTER_COLORS.push, fontFamily: "'Cormorant Garamond', serif" }}>AI Conversazionale</div>
                         <p className="text-xs font-medium text-gray-600 leading-relaxed mb-5 flex-grow">
                             Suggerimento diretto, personalizzazione e AI conversazionale con focus fortemente transazionale su conversion rate e AOV.
@@ -355,13 +386,14 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </div>
                 ) : <div></div>}
 
-                {s(6) && (
+                {/* PULL CARD */}
+                {s(7) && (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
                         style={{ borderTopColor: MASTER_COLORS.pull }}
                         onClick={() => onSelectPhase(3)} 
                     >
-                        <div className="mb-4"><Badge color={MASTER_COLORS.pull}>FASE 2B · PULL (B)</Badge></div>
+                        <div className="mb-4"><Badge color={MASTER_COLORS.pull}>TRAIETTORIA PULL (B)</Badge></div>
                         <div className="text-xl font-bold mb-3" style={{ color: MASTER_COLORS.pull, fontFamily: "'Cormorant Garamond', serif" }}>Contenuto Editoriale</div>
                         <p className="text-xs font-medium text-gray-600 leading-relaxed mb-5 flex-grow">
                             Suggerimento indiretto attraverso contenuto autorevole, capace di intercettare domanda latente e costruire relazione nel tempo.
@@ -378,7 +410,8 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                 )}
             </div>
 
-            {s(7) && (
+            {/* STEP 8: SINTESI */}
+            {s(8) && (
                 <div className="mt-16 animate-fadeIn">
                     <div className="text-[10px] tracking-[3px] uppercase text-gray-400 text-center font-bold mb-6">
                         Sintesi comparativa
@@ -405,7 +438,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </div>
 
                     <p className="text-sm italic text-gray-500 text-center max-w-md mx-auto mt-12 mb-8 leading-relaxed font-serif" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                        "La decisione sulla traiettoria sarà basata sull'ambizione che Feudi di San Gregorio vorrà esprimere."
+                        "La decisione sulla traiettoria sarà loro, sulla base dell'ambizione che vorranno esprimere."
                     </p>
 
                     <div className="text-center">
