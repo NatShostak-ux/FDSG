@@ -241,7 +241,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         Road to Excellence
                     </div>
                     <p className="text-sm font-medium text-gray-600 leading-relaxed mb-6 max-w-xl">
-                        Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali — costruendo una macchina di conversione solida su fondamenta sane.
+                        Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali - costruendo una macchina di conversione solida su fondamenta sane.
                     </p>
                     
                     {/* ZONA TARGET & BREAKDOWN ALBERO */}
