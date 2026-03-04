@@ -168,7 +168,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                      Editorialità
                  </h3>
                  <p className="text-sm text-gray-600 leading-relaxed font-light">
-                     Il contenuto come canale di acquisizione e retention. Feudi di San Gregorio ha un patrimonio culturale — territorio, vitigni, storia — che nessun competitor può replicare. Trasformarlo in contenuto autorevole significa intercettare domanda latente, costruire autorevolezza e ridurre la dipendenza dalla pubblicità a pagamento.
+                     Il contenuto come canale di acquisizione e retention. Feudi di San Gregorio ha un patrimonio culturale - territorio, vitigni, storia - che nessun competitor può replicare. Trasformarlo in contenuto autorevole significa intercettare domanda latente, costruire autorevolezza e ridurre la dipendenza dalla pubblicità a pagamento.
                  </p>
              </div>
 
@@ -185,7 +185,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                      Conversione assistita
                  </h3>
                  <p className="text-sm text-gray-600 leading-relaxed font-light">
-                     Un sistema che accompagna l'utente dalla scoperta all'acquisto — attraverso raccomandazioni personalizzate, un sommelier digitale che apprende nel tempo, o entrambi — trasformando ogni visita in una conversazione e ogni conversazione in una relazione.
+                     Un sistema che accompagna l'utente dalla scoperta all'acquisto - attraverso raccomandazioni personalizzate, un sommelier digitale che apprende nel tempo, o entrambi - trasformando ogni visita in una conversazione e ogni conversazione in una relazione.
                  </p>
              </div>
           </div>
