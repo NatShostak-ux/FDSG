@@ -68,8 +68,6 @@ function App() {
         setActiveScenarioId(targetScenarioId);
         setActiveView('dashboard'); 
         setAppMode('scenario'); 
-        
-        // FIX SCROLL: Riporta l'utente in cima alla pagina!
         window.scrollTo(0, 0);
     }
   };
@@ -77,7 +75,6 @@ function App() {
   // NAVIGAZIONE: TASTO INDIETRO
   const handleBackToMaster = () => {
       setAppMode('master');
-      // FIX SCROLL: Riporta l'utente in cima alla pagina quando torna indietro!
       window.scrollTo(0, 0);
   };
 
@@ -188,7 +185,7 @@ function App() {
 
       <main className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50">
         
-        {/* LIVELLO 0: MASTER ROADMAP (Nascosto via CSS se siamo in uno scenario per non perdere lo stato) */}
+        {/* LIVELLO 0: MASTER ROADMAP */}
         <div className={appMode === 'master' ? 'block' : 'hidden'}>
             <MasterRoadmapView onSelectPhase={handleSelectPhase} />
         </div>
@@ -198,7 +195,33 @@ function App() {
             <div className="animate-fadeIn">
                 <div className="mb-8">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Scenario in visione</span>
+                        
+                        {/* SWITCHER SCENARI MINIMALISTA */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Scenario in visione</span>
+                            
+                            <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+                                {/* .reverse() inverte l'array per mostrare prima la FASE 1, poi FASE 2A, poi FASE 2B */}
+                                {[...scenarios].reverse().map((s) => {
+                                    const isActive = s.id === activeScenarioId;
+                                    return (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => setActiveScenarioId(s.id)}
+                                            className={`px-4 py-1.5 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all truncate max-w-[200px] ${
+                                                isActive 
+                                                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                                            }`}
+                                            title={s.title}
+                                        >
+                                            {s.title || 'Nuovo Scenario'}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <input type="text" value={activeScenario?.title || ''} onChange={(e) => updateScenarioMeta('title', e.target.value)} disabled={!isEditor} className="w-full text-2xl font-bold text-gray-900 border-0 focus:ring-0 px-0 bg-transparent mb-1" placeholder="Titolo Scenario" />
                         <AdvancedEditor value={activeScenario?.description || ''} onChange={(val) => updateScenarioMeta('description', val)} placeholder="Aggiungi una descrizione strategica per questo scenario..." disabled={!isEditor} />
                     </div>
