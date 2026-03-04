@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Info } from 'lucide-react';
 
 const MASTER_COLORS = {
   p1: '#0f172a',   // Slate 900
@@ -10,6 +10,17 @@ const MASTER_COLORS = {
 
 const ARAD_GOLD = '#bf9000';
 const ARAD_CHART_BG = '#081f32';
+
+// Dati per il breakdown interattivo della Fase 1
+const PHASE_1_BREAKDOWN = [
+  { id: 'ux', area: 'UXD', color: '#9333ea', title: 'Ristrutturazione completa navigazione ecom', desc: "Riorganizza categorie, menu e percorsi di acquisto per ridurre l'abbandono e aumentare la profondità di visita." },
+  { id: 'seo', area: 'SEO', color: '#16a34a', title: 'Consolidamento domini e authority (EEAT)', desc: "Unifica i domini esistenti e ottimizza i contenuti per i segnali di autorevolezza che Google premia nel settore food & wine." },
+  { id: 'loyalty', area: 'LOY', color: '#db2777', title: 'Lancio subscription box', desc: "Introduce un prodotto in abbonamento ricorrente come primo meccanismo di fidelizzazione attiva." },
+  { id: 'crm', area: 'CRM', color: '#0891b2', title: 'Attivazione Welcome series', desc: "Configura il flusso email automatico post-registrazione per attivare i nuovi contatti verso il primo acquisto." },
+  { id: 'ecommerce', area: 'ECM', color: '#2563eb', title: 'Nuovo checkout ottimizzato per CR', desc: "Ridisegna il processo di acquisto riducendo gli step, ottimizzando i pagamenti e abbattendo il tasso di abbandono carrello." },
+  { id: 'distribution', area: 'MRK', color: '#d97706', title: 'Setup AMZ Corner e Vivino Verified', desc: "Attiva e presidia i profili di vendita su Amazon e Vivino per intercettare domanda già esistente fuori dal sito." },
+  { id: 'social', area: 'SOC', color: '#dc2626', title: 'Avvio social commerce exp. e gift card', desc: "Abilita l'acquisto diretto dai canali social e lancia il prodotto gift card come leva di acquisizione." }
+];
 
 const Badge = ({ color, children }) => (
   <span style={{ backgroundColor: color }} className="text-white text-[10px] tracking-widest font-bold px-3 py-1 rounded-full inline-block">
@@ -33,6 +44,10 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
   const [step, setStep] = useState(0);
   const [showRoadmap, setShowRoadmap] = useState(false);
   const [activeNode, setActiveNode] = useState(null);
+  
+  // Stati per l'interazione della Fase 1
+  const [showPhase1Tree, setShowPhase1Tree] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState(null);
 
   const run = () => {
     setStep(0);
@@ -58,10 +73,10 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
           <div className="text-[10px] tracking-[4px] uppercase text-gray-400 mb-3 font-bold">
             Feudi di San Gregorio · D2C Strategy
           </div>
-         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-  <span className="block">Modulo 2:</span>
-  <span className="block">3 Principi Chiave</span>
-</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+            <span className="block">Modulo 2:</span>
+            <span className="block">3 Principi Chiave</span>
+          </h1>
           <div className="w-16 h-1 mx-auto rounded-full" style={{ backgroundColor: MASTER_COLORS.gold }}></div>
         </div>
 
@@ -211,6 +226,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
 
             <VConnector color={MASTER_COLORS.p1} height={40} visible={s(1)} />
 
+            {/* STEP 2: FASE 1 CARD */}
             {s(2) && (
                 <div 
                     className="bg-white border border-gray-200 border-l-4 rounded-xl rounded-l-none p-8 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group animate-fadeIn" 
@@ -227,14 +243,73 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     <p className="text-sm font-medium text-gray-600 leading-relaxed mb-6 max-w-xl">
                         Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali — costruendo una macchina di conversione solida su fondamenta sane.
                     </p>
-                    <div className="flex items-center justify-between">
-                        <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full border" style={{ backgroundColor: `${MASTER_COLORS.p1}10`, borderColor: `${MASTER_COLORS.p1}30` }}>
-                            <span className="text-2xl font-bold" style={{ color: MASTER_COLORS.p1, fontFamily: "'Cormorant Garamond', serif" }}>€ 1M</span>
-                            <span className="text-[11px] font-bold tracking-wider uppercase" style={{ color: MASTER_COLORS.p1 }}>target D2C in 12 mesi</span>
+                    
+                    {/* ZONA TARGET & BREAKDOWN ALBERO */}
+                    <div className="flex flex-col gap-5 mt-8">
+                        <div className="flex items-center justify-between relative z-20">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Evita di entrare nello scenario
+                                    setShowPhase1Tree(!showPhase1Tree);
+                                }}
+                                className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                                <span className="text-2xl font-bold" style={{ color: MASTER_COLORS.p1, fontFamily: "'Cormorant Garamond', serif" }}>€ 1M</span>
+                                <span className="text-[11px] font-bold tracking-wider uppercase flex items-center gap-2" style={{ color: MASTER_COLORS.p1 }}>
+                                    target D2C in 12 mesi
+                                    <ChevronDown size={14} className={`transition-transform duration-300 text-gray-400 ${showPhase1Tree ? 'rotate-180' : ''}`} />
+                                </span>
+                            </button>
+                            <div className="text-sm font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: MASTER_COLORS.p1 }}>
+                                Entra nello Scenario <ChevronRight size={16}/>
+                            </div>
                         </div>
-                        <div className="text-sm font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: MASTER_COLORS.p1 }}>
-                            Entra nello Scenario <ChevronRight size={16}/>
-                        </div>
+
+                        {/* ALBERO INTERATTIVO (Espandibile) */}
+                        {showPhase1Tree && (
+                            <div 
+                                className="mt-2 ml-4 relative flex flex-col gap-4 animate-fadeIn"
+                                onClick={(e) => e.stopPropagation()} // Cliccare l'albero non fa entrare nello scenario
+                            >
+                                {/* Linea verticale principale dell'albero */}
+                                <div className="absolute left-[3.5px] top-2 bottom-2 w-px bg-gray-200"></div>
+
+                                {PHASE_1_BREAKDOWN.map((item) => (
+                                    <div key={item.id} className="flex items-center relative z-10 group/item">
+                                        
+                                        {/* Pallino + Ramo Orizzontale */}
+                                        <div className="w-8 flex items-center justify-between flex-shrink-0">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                                            <div className="w-5 h-px bg-gray-200"></div>
+                                        </div>
+
+                                        {/* Tag Area */}
+                                        <span className="text-[10px] font-bold text-white px-2 py-0.5 ml-2 rounded flex-shrink-0 shadow-sm text-center min-w-[36px]" style={{ backgroundColor: item.color }}>
+                                            {item.area}
+                                        </span>
+                                        
+                                        {/* Titolo */}
+                                        <span className="text-sm font-medium text-gray-800 ml-3">{item.title}</span>
+                                        
+                                        {/* Icona Info (i) Elegante + Tooltip Bianco */}
+                                        <div 
+                                            className="relative flex items-center ml-2"
+                                            onMouseEnter={() => setActiveTooltip(item.id)}
+                                            onMouseLeave={() => setActiveTooltip(null)}
+                                        >
+                                            <Info size={15} className="text-gray-300 hover:text-gray-500 cursor-help transition-colors" />
+                                            
+                                            {/* TOOLTIP BIANCO OVERLAY */}
+                                            {activeTooltip === item.id && (
+                                                <div className="absolute left-8 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
+                                                    {item.desc}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
