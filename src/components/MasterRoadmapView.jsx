@@ -279,15 +279,21 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         {/* ALBERO INTERATTIVO CON ABILITATORI */}
                         {showPhase1Tree && (
                             <div 
-                                className="mt-2 ml-4 pl-4 border-l-2 border-gray-200 flex flex-col gap-3 animate-fadeIn relative z-10"
+                                className="mt-5 ml-6 relative animate-fadeIn"
                                 onClick={(e) => e.stopPropagation()} 
                             >
+                                {/* Linea verticale principale dell'albero */}
+                                <div className="absolute left-0 top-3 bottom-0 w-px bg-gray-300 z-0"></div>
+
                                 {/* LE 7 INIZIATIVE */}
                                 {PHASE_1_BREAKDOWN.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between gap-3 relative group/item">
+                                    <div key={item.id} className="relative flex items-center justify-between gap-3 pl-8 mb-5 group/item z-10">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-3 h-px bg-gray-200"></div>
-                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: item.color }}>
+                                            {/* Ramo orizzontale e pallino */}
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-px bg-gray-300"></div>
+                                            <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                                            
+                                            <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm ml-1" style={{ backgroundColor: item.color }}>
                                                 {item.area}
                                             </span>
                                             <span className="text-sm font-medium text-gray-700">{item.title}</span>
@@ -310,17 +316,19 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                     </div>
                                 ))}
 
-                                {/* ABILITATORI TRASVERSALI (Senza icone, 3 colonne) */}
-                                <div className="relative mt-8">
-                                    <div className="absolute -left-4 top-0 h-4 w-px bg-gray-200"></div>
-                                    <div className="absolute -left-4 top-4 w-4 h-px bg-gray-200"></div>
+                                {/* ABILITATORI TRASVERSALI (UI Pulita ad Angolo Retto) */}
+                                <div className="relative flex items-start pl-8 mt-8 pb-2 z-10">
+                                    {/* Ramo Orizzontale per Abilitatori ad angolo retto */}
+                                    <div className="absolute left-0 top-2.5 w-6 h-px bg-gray-300"></div>
+                                    {/* Toppa bianca per tagliare la linea verticale e formare l'angolo perfetto */}
+                                    <div className="absolute -left-[2px] top-[11px] bottom-[-50px] w-1 bg-white z-0"></div>
                                     
-                                    <div className="ml-2">
-                                        <span className="text-[10px] tracking-widest font-bold text-gray-400 uppercase bg-white px-2 relative -left-2">
+                                    <div className="w-full relative z-10">
+                                        <span className="text-[12px] tracking-[2px] font-bold text-slate-500 uppercase leading-none">
                                             Abilitatori Trasversali
                                         </span>
                                         
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
                                             <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
                                                 <div className="text-[10px] font-bold text-slate-800 uppercase tracking-wider mb-2">Logistica</div>
                                                 <p className="text-[11px] text-slate-600 leading-relaxed">
@@ -395,6 +403,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
 
             {/* STEP 6 & 7: PUSH + PULL CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-1">
+                {/* PUSH CARD */}
                 {s(6) ? (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
@@ -417,6 +426,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                     </div>
                 ) : <div></div>}
 
+                {/* PULL CARD */}
                 {s(7) && (
                     <div 
                         className="bg-white border border-gray-200 border-t-4 rounded-xl rounded-t-none p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer flex flex-col group animate-fadeIn" 
