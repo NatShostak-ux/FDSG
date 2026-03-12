@@ -235,4 +235,131 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     <div className="space-y-2 flex-grow min-w-[320px]">
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tempistiche</label>
                                         <div className="flex items-center justify-between gap-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100 h-11 px-4">
-                                            <div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 flex-shrink-0" /><input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)}
+                                            <div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 flex-shrink-0" /><input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32" /></div>
+                                            <span className="text-gray-300">→</span>
+                                            <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32 text-right" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 w-64">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Budget (€)</label>
+                                        <div className="flex items-center gap-2 h-11"><input type="number" placeholder="Min" value={selectedProject.budgetMin ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMin', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /><span className="text-gray-300">-</span><input type="number" placeholder="Max" value={selectedProject.budgetMax ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMax', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /></div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="space-y-2 w-20 text-center">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priorità</label>
+                                            <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-lg font-bold text-center h-11" style={{ color: area.hex }} />
+                                        </div>
+                                        <div className="space-y-2 w-20 text-center">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Effort</label>
+                                            <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-lg font-bold text-center h-11 text-gray-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrizione Iniziativa</label>
+                                    
+                                    {/* === LA CHIAVE CHE RISOLVE IL BUG È QUI === */}
+                                    <AdvancedEditor key={`desc-${selectedProject.id}`} value={selectedProject.description || ''} onChange={(val) => updateProject(activeView, selectedProject.id, 'description', val)} disabled={!isEditor} />
+                                
+                                </div>
+                                <div className="space-y-4 pt-6">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abilitatori Chiave (Key Enablers)</label>
+                                    <div className="space-y-3">
+                                        {(selectedProject.enablers || [""]).map((enabler, index) => (
+                                            <div key={index} className="flex items-center gap-3 group">
+                                                <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                                                <input type="text" value={enabler} placeholder={index === 0 ? "Aggiungi abilitatore..." : ""} className={`enabler-input-${selectedProject.id} flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm text-gray-700 font-medium`} onChange={(e) => { const newEnablers = [...(selectedProject.enablers || [""])]; newEnablers[index] = e.target.value; updateProject(activeView, selectedProject.id, 'enablers', newEnablers); }} onKeyDown={(e) => handleEnablerKeyDown(e, index, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} />
+                                                {isEditor && <button onClick={() => { const newEnablers = selectedProject.enablers.filter((_, i) => i !== index); updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500"><X size={16} /></button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12"><Calendar size={48} className="opacity-20" /><p className="italic text-sm">Seleziona un progetto dal Gantt per visualizzare i dettagli</p></div>
+                    )}
+                </div>
+            </Card>
+
+            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
+                <div className="p-6 space-y-6 bg-slate-50/50">
+                    {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
+                        <div className="text-gray-400 italic text-sm">Nessuna metrica definita.</div>
+                    ) : (
+                        data.ksms.map((ksm) => (
+                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
+                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600"><Trash2 size={18} /></button>}
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
+                                    <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0" placeholder="Nome Metrica" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label><input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-sm p-0" placeholder="Es. 1.2%" /></div>
+                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label><input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-sm p-0 text-blue-600 font-bold" placeholder="Es. > 2.5%" /></div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
+                                    {/* Inserita key per forzare il refresh */}
+                                    <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} />
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </Card>
+
+            <Card title="Attività a Regime" icon={Clock}>
+                <div className="space-y-4">
+                    {isEditor && (
+                        <div className="flex items-center gap-3">
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime necessarie per raggiungere gli obiettivi fissati." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
+                            <Button variant="secondary" onClick={handleAddRoutineTask}>+ Aggiungi</Button>
+                        </div>
+                    )}
+                    {routineTasks.length === 0 ? (
+                        <div className="text-gray-400 text-sm italic">Nessuna attività day-by-day definita.</div>
+                    ) : (
+                        <div className="space-y-2 mt-4">
+                            {routineTasks.map((task) => (
+                                <div key={task.id} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                                    <div className="flex items-start gap-3 flex-grow">
+                                        <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>
+                                            {task.completed && <Check size={12} strokeWidth={3} />}
+                                        </button>
+                                        
+                                        {isEditor ? (
+                                            <textarea
+                                                value={task.text}
+                                                onChange={(e) => {
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                    updateRoutineTaskText(task.id, e.target.value);
+                                                }}
+                                                ref={el => {
+                                                    if(el) {
+                                                        el.style.height = 'auto';
+                                                        el.style.height = el.scrollHeight + 'px';
+                                                    }
+                                                }}
+                                                rows={1}
+                                                className={`flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm outline-none transition-colors resize-none overflow-hidden leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}
+                                            />
+                                        ) : (
+                                            <span className={`text-sm select-none leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
+                                                {task.text}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 p-1 flex-shrink-0 mt-0.5"><X size={16} /></button>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+export default AreaEditor;
