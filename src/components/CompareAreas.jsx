@@ -16,11 +16,8 @@ const AVAILABLE_FIELDS = [
 const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => {
     const [selectedAreas, setSelectedAreas] = useState([]);
     const [selectedFields, setSelectedFields] = useState([]);
-    
-    // STATO PER IL POP-UP PROGETTO
     const [modalProject, setModalProject] = useState(null);
 
-    // BLOCCO SCROLL QUANDO MODALE APERTA
     useEffect(() => {
         if (modalProject) {
             document.body.style.overflow = 'hidden';
@@ -54,23 +51,26 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
         }
     };
 
-    // APRE IL POP-UP (Recupera i dati completi del progetto)
+    // APERTURA MODALE: Salviamo esplicitamente l'areaId per la navigazione
     const handleProjectClick = (project, areaDef) => {
         setModalProject({
             ...project,
+            areaId: areaDef.id, // Salviamo l'ID reale dell'area
             areaLabel: areaDef.label,
             areaColor: areaDef.hex
         });
     };
 
-    // FUNZIONE "MODIFICA INIZIATIVA" (Teletrasporto all'editor)
+    // FIX TASTO MODIFICA: Ora usa l'areaId salvato correttamente
     const handleGoToEdit = () => {
-        if (modalProject) {
+        if (modalProject && modalProject.areaId) {
+            // 1. Impostiamo il focus per illuminare il progetto all'arrivo
             if (setSearchFocusItem) {
                 setSearchFocusItem({ type: 'project', id: modalProject.id });
             }
-            const areaId = EXPERTISE_AREAS.find(a => a.label === modalProject.areaLabel)?.id;
-            if (areaId) setActiveView(areaId);
+            // 2. Cambiamo la vista sull'area corretta
+            setActiveView(modalProject.areaId);
+            // 3. Chiudiamo la modale e resettiamo lo scroll
             setModalProject(null);
             window.scrollTo(0, 0);
         }
@@ -168,7 +168,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
     return (
         <div className="space-y-6 animate-fadeIn pb-20">
             
-            {/* POP-UP DETTAGLIO SINGOLO PROGETTO (Lo stesso della Dashboard) */}
+            {/* POP-UP DETTAGLIO SINGOLO PROGETTO */}
             {modalProject && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 animate-fadeIn" onClick={() => setModalProject(null)}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all" onClick={e => e.stopPropagation()}>
