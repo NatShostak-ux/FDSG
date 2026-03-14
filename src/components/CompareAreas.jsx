@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, List, TrendingUp, Activity, Clock, Award, X, Columns3, Rows3, Info, Wand2 } from 'lucide-react';
+import { Target, List, TrendingUp, Activity, Clock, Award, X, Columns3, Rows3, Info, ArrowRightLeft } from 'lucide-react';
 import { EXPERTISE_AREAS } from '../utils/constants';
 import { getStrategicRole } from './AreaEditor';
 
@@ -54,11 +54,10 @@ const CompareAreas = ({ activeScenario }) => {
                 return (areaData.projects || []).length > 0 ? (
                     <div className="space-y-3">
                         {areaData.projects.map(p => (
-                            <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative">
-                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
+                            <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <div className="flex items-center gap-2 pl-2">
-                                    {/* === ICONA AGGIORNATA QUI: UGUALE ALLA SIDEBAR === */}
-                                    {areaDef?.icon && <areaDef.icon size={16} style={{ color: areaDef?.hex }} />}
+                                    {areaDef?.icon && <areaDef.icon size={14} style={{ color: areaDef?.hex }} />}
                                     <span className="font-bold text-[14px] text-gray-900">{p.title || 'Senza Titolo'}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide pl-2">
@@ -80,8 +79,8 @@ const CompareAreas = ({ activeScenario }) => {
                 return (
                     <div className="space-y-4">
                         {years.map(y => (
-                            <div key={y} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 relative">
-                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
+                            <div key={y} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">Anno {y}</div>
                                 <div className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none pl-2" dangerouslySetInnerHTML={{ __html: areaData[`evolution_y${y}`] }} />
                             </div>
@@ -94,9 +93,9 @@ const CompareAreas = ({ activeScenario }) => {
                 return ksms.length > 0 ? (
                     <div className="space-y-3">
                         {ksms.map(k => (
-                            <div key={k.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-3">
-                                {/* === PUNTINO KSM RISOLTO === */}
-                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: areaDef?.hex }}></div>
+                            <div key={k.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-3 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <div className="w-2 h-2 rounded-full flex-shrink-0 ml-1" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <div>
                                     <div className="font-bold text-sm text-gray-800 mb-0.5">{k.name}</div>
                                     <div className="flex gap-4 text-[11px]">
@@ -114,9 +113,8 @@ const CompareAreas = ({ activeScenario }) => {
                     <ul className="space-y-2">
                         {areaData.routine.map(t => (
                             <li key={t.id} className="flex items-start gap-2.5 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100 relative overflow-hidden">
-                                {/* === ICONA ROUTINE RISOLTA === */}
-                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
-                                <Clock size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0 ml-1" />
                                 <span className="leading-snug">{t.text}</span>
                             </li>
                         ))}
@@ -129,15 +127,15 @@ const CompareAreas = ({ activeScenario }) => {
 
     return (
         <div className="space-y-6 animate-fadeIn pb-20">
-            {/* HEADER CONFIGURATORE */}
+            {/* HEADER CONFIGURATORE - ICONA AGGIORNATA A ArrowRightLeft */}
             <div className="bg-white rounded-[24px] border border-gray-200 p-8 shadow-sm">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="p-3 bg-yellow-50 rounded-xl">
-                        <Wand2 className="text-yellow-600" size={24} />
+                        <ArrowRightLeft className="text-yellow-600" size={24} />
                     </div>
                     <div>
-                        <h2 className="text-[22px] font-bold text-gray-900">Configuratore di Confronto</h2>
-                        <p className="text-gray-500 text-sm">Analizza le dipendenze e i dettagli all'interno dello scenario "{activeScenario.title}"</p>
+                        <h2 className="text-[22px] font-bold text-gray-900">Confronto Aree</h2>
+                        <p className="text-gray-500 text-sm">Configura la matrice per analizzare i dettagli dello scenario</p>
                     </div>
                 </div>
 
@@ -149,13 +147,16 @@ const CompareAreas = ({ activeScenario }) => {
                         </h3>
                         <div 
                             onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'area')}
-                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-white"
+                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30"
                         >
+                            {selectedAreas.length === 0 && (
+                                <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina le aree qui</div>
+                            )}
                             {selectedAreas.map(id => {
                                 const area = EXPERTISE_AREAS.find(a => a.id === id);
                                 return (
                                     <div key={id} className="h-10 px-4 rounded-full text-white font-bold text-[13px] flex items-center gap-3 shadow-sm animate-fadeIn" style={{ backgroundColor: area?.hex }}>
-                                        <area.icon size={16} /> {area?.label}
+                                        {area && <area.icon size={16} />} {area?.label}
                                         <X size={16} className="cursor-pointer hover:bg-white/20 rounded-full" onClick={() => toggleArea(id)} />
                                     </div>
                                 );
@@ -163,8 +164,8 @@ const CompareAreas = ({ activeScenario }) => {
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2">
                             {EXPERTISE_AREAS.filter(a => !selectedAreas.includes(a.id)).map(a => (
-                                <button key={a.id} draggable onDragStart={(e) => onDragStart(e, a.id, 'area')} onClick={() => toggleArea(a.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: a.hex }}></div> {a.label}
+                                <button key={a.id} draggable onDragStart={(e) => onDragStart(e, a.id, 'area')} onClick={() => toggleArea(a.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: a.hex }}></div> {a.label}
                                 </button>
                             ))}
                         </div>
@@ -177,13 +178,16 @@ const CompareAreas = ({ activeScenario }) => {
                         </h3>
                         <div 
                             onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'field')}
-                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-white"
+                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30"
                         >
+                            {selectedFields.length === 0 && (
+                                <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina le voci qui</div>
+                            )}
                             {selectedFields.map(id => {
                                 const field = AVAILABLE_FIELDS.find(f => f.id === id);
                                 return (
                                     <div key={id} className="h-10 px-4 rounded-full bg-[#1e293b] text-white font-bold text-[13px] flex items-center gap-3 shadow-sm animate-fadeIn">
-                                        <field.icon size={16} className="text-yellow-500" /> {field?.label}
+                                        {field && <field.icon size={16} className="text-yellow-500" />} {field?.label}
                                         <X size={16} className="cursor-pointer hover:bg-white/20 rounded-full" onClick={() => toggleField(id)} />
                                     </div>
                                 );
@@ -191,7 +195,7 @@ const CompareAreas = ({ activeScenario }) => {
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2">
                             {AVAILABLE_FIELDS.filter(f => !selectedFields.includes(f.id)).map(f => (
-                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(f.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
                                     <f.icon size={14} className="text-gray-400" /> {f.label}
                                 </button>
                             ))}
@@ -202,7 +206,7 @@ const CompareAreas = ({ activeScenario }) => {
 
             {/* TABELLA CONFRONTO */}
             {selectedAreas.length > 0 && selectedFields.length > 0 ? (
-                <div className="bg-white rounded-[24px] border border-gray-200 shadow-xl overflow-hidden">
+                <div className="bg-white rounded-[24px] border border-gray-200 shadow-xl overflow-hidden animate-fadeIn">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -214,7 +218,7 @@ const CompareAreas = ({ activeScenario }) => {
                                             <th key={id} className="p-8 border-b border-l border-gray-100 bg-white min-w-[350px]">
                                                 <div className="flex items-center gap-4">
                                                     <div className="p-3 rounded-2xl text-white shadow-lg" style={{ backgroundColor: area?.hex }}>
-                                                        <area.icon size={24} />
+                                                        {area && <area.icon size={24} />}
                                                     </div>
                                                     <span className="font-bold text-gray-900 text-[20px]">{area?.label}</span>
                                                 </div>
@@ -230,7 +234,7 @@ const CompareAreas = ({ activeScenario }) => {
                                         <tr key={fid} className="group">
                                             <td className="p-6 border-b border-gray-100 font-bold text-[11px] text-gray-400 uppercase tracking-[0.1em] bg-white sticky left-0 z-10 align-top group-hover:bg-blue-50/50 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <field.icon size={18} /> {field?.label}
+                                                    {field && <field.icon size={18} />} {field?.label}
                                                 </div>
                                             </td>
                                             {selectedAreas.map(aid => (
@@ -250,7 +254,7 @@ const CompareAreas = ({ activeScenario }) => {
                     <div className="p-4 bg-gray-100 rounded-full mb-6">
                         <Info size={32} className="text-gray-400" />
                     </div>
-                    <p className="text-[16px] font-medium text-gray-500">Scegli almeno un'Area e una Voce per generare il confronto</p>
+                    <p className="text-[16px] font-medium text-gray-500">Configura la matrice selezionando Aree e Voci in alto</p>
                 </div>
             )}
         </div>
