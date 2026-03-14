@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import AreaEditor from './components/AreaEditor';
 import AdvancedEditor from './components/AdvancedEditor';
 import MasterRoadmapView from './components/MasterRoadmapView'; 
-import CompareAreas from './components/CompareAreas'; // <--- IMPORTIAMO IL NUOVO COMPONENTE
+import CompareAreas from './components/CompareAreas'; 
 import { ARAD_BLUE, ARAD_GOLD, INITIAL_SCENARIOS, EMPTY_AREA_DATA, EXPERTISE_AREAS } from './utils/constants';
 import { auth, db, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -289,7 +289,7 @@ function App() {
                                                         <div key={idx} onMouseDown={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors group">
                                                             <div className="flex items-center gap-2 mb-1.5">
                                                                 <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
-                                                                <span className="text-[10px] font-bold text-gray-500 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
+                                                                <span className="text-[10px] font-bold text-gray-400 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
                                                             </div>
                                                             <div className="font-medium text-sm text-slate-800 group-hover:text-blue-900 transition-colors">{res.text}</div>
                                                             {res.details && <div className="text-xs font-medium text-slate-500 mt-1 truncate">{res.details}</div>}
@@ -341,7 +341,11 @@ function App() {
                                 setSearchFocusItem={setSearchFocusItem}
                             />
                         ) : activeView === 'compare' ? (
-                            <CompareAreas activeScenario={activeScenario} />
+                            <CompareAreas 
+                                activeScenario={activeScenario} 
+                                setActiveView={setActiveView} 
+                                setSearchFocusItem={setSearchFocusItem} 
+                            />
                         ) : (
                             <AreaEditor
                                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
