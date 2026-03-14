@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import AreaEditor from './components/AreaEditor';
 import AdvancedEditor from './components/AdvancedEditor';
 import MasterRoadmapView from './components/MasterRoadmapView'; 
+import CompareAreas from './components/CompareAreas'; // <--- IMPORTIAMO IL NUOVO COMPONENTE
 import { ARAD_BLUE, ARAD_GOLD, INITIAL_SCENARIOS, EMPTY_AREA_DATA, EXPERTISE_AREAS } from './utils/constants';
 import { auth, db, logout } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -26,7 +27,6 @@ function App() {
   // Stati per la Ricerca Globale
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  // Stato per le coordinate del focus ricerca
   const [searchFocusItem, setSearchFocusItem] = useState(null);
 
   useEffect(() => {
@@ -82,13 +82,11 @@ function App() {
       window.scrollTo(0, 0);
   };
 
-  // === MOTORE DI RICERCA POTENZIATO ===
   const searchResults = useMemo(() => {
       if (!searchQuery || searchQuery.length < 2) return [];
       const q = searchQuery.toLowerCase();
       const results = [];
 
-      // Funzione per decodificare entità HTML semplici come &amp; in testo leggibile
       const decodeHTML = (html) => {
           const txt = document.createElement("textarea");
           txt.innerHTML = html;
@@ -139,6 +137,7 @@ function App() {
       setSearchFocusItem({ type: res.itemType, id: res.itemId });
       setSearchQuery('');
       setIsSearchFocused(false);
+      window.scrollTo(0, 0);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
@@ -292,7 +291,6 @@ function App() {
                                                                 <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
                                                                 <span className="text-[10px] font-bold text-gray-500 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
                                                             </div>
-                                                            {/* === COLORI AGGIORNATI QUI: test-slate-800 e hover:text-blue-900 === */}
                                                             <div className="font-medium text-sm text-slate-800 group-hover:text-blue-900 transition-colors">{res.text}</div>
                                                             {res.details && <div className="text-xs font-medium text-slate-500 mt-1 truncate">{res.details}</div>}
                                                         </div>
@@ -334,12 +332,16 @@ function App() {
                     <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />
                     
                     <div className="flex-grow min-w-0 transition-all duration-300">
+                        {/* GESTIONE ROUTING VISTE (Dashboard, Compare, AreaEditor) */}
                         {activeView === 'dashboard' ? (
                             <Dashboard 
                                 activeScenario={activeScenario} 
                                 setActiveView={setActiveView} 
                                 updateProjectBatch={handleBatchUpdateProject} 
+                                setSearchFocusItem={setSearchFocusItem}
                             />
+                        ) : activeView === 'compare' ? (
+                            <CompareAreas activeScenario={activeScenario} />
                         ) : (
                             <AreaEditor
                                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
