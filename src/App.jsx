@@ -26,7 +26,7 @@ function App() {
   // Stati per la Ricerca Globale
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  // NUOVO STATO: Salva le coordinate esatte dell'elemento cliccato
+  // Stato per le coordinate del focus ricerca
   const [searchFocusItem, setSearchFocusItem] = useState(null);
 
   useEffect(() => {
@@ -82,11 +82,18 @@ function App() {
       window.scrollTo(0, 0);
   };
 
-  // === MOTORE DI RICERCA POTENZIATO (con Coordinate) ===
+  // === MOTORE DI RICERCA POTENZIATO ===
   const searchResults = useMemo(() => {
       if (!searchQuery || searchQuery.length < 2) return [];
       const q = searchQuery.toLowerCase();
       const results = [];
+
+      // Funzione per decodificare entità HTML semplici come &amp; in testo leggibile
+      const decodeHTML = (html) => {
+          const txt = document.createElement("textarea");
+          txt.innerHTML = html;
+          return txt.value;
+      };
 
       (scenarios || []).forEach(scenario => {
           Object.entries(scenario.data || {}).forEach(([areaId, areaData]) => {
@@ -94,9 +101,10 @@ function App() {
               const areaLabel = areaDef ? areaDef.label : areaId;
               const pathStr = `${scenario.title || 'Scenario'} > ${areaLabel}`;
 
-              // Aggiunto itemType e itemId per lo scroll
               const addResult = (type, text, details = '', itemType, itemId = null) => {
-                  results.push({ id: Math.random().toString(), scenarioId: scenario.id, areaId, type, text, details, pathStr, areaColor: areaDef?.hex || '#999', itemType, itemId });
+                  const cleanText = decodeHTML(text);
+                  const cleanDetails = decodeHTML(details);
+                  results.push({ id: Math.random().toString(), scenarioId: scenario.id, areaId, type, text: cleanText, details: cleanDetails, pathStr, areaColor: areaDef?.hex || '#999', itemType, itemId });
               };
 
               if (areaData.objectives?.toLowerCase().includes(q)) addResult('Obiettivo', areaData.objectives.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...', '', 'objective');
@@ -128,7 +136,7 @@ function App() {
   const handleResultClick = (res) => {
       setActiveScenarioId(res.scenarioId);
       setActiveView(res.areaId);
-      setSearchFocusItem({ type: res.itemType, id: res.itemId }); // Passa il focus
+      setSearchFocusItem({ type: res.itemType, id: res.itemId });
       setSearchQuery('');
       setIsSearchFocused(false);
   };
@@ -279,13 +287,14 @@ function App() {
                                                         {searchResults.length} Risultati trovati
                                                     </div>
                                                     {searchResults.map((res, idx) => (
-                                                        <div key={idx} onMouseDown={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                                                        <div key={idx} onMouseDown={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors group">
                                                             <div className="flex items-center gap-2 mb-1.5">
                                                                 <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
-                                                                <span className="text-[10px] font-bold text-gray-400 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
+                                                                <span className="text-[10px] font-bold text-gray-500 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
                                                             </div>
-                                                            <div className="font-medium text-sm text-gray-800 group-hover:text-blue-700 transition-colors">{res.text}</div>
-                                                            {res.details && <div className="text-xs font-medium text-gray-500 mt-1 truncate">{res.details}</div>}
+                                                            {/* === COLORI AGGIORNATI QUI: test-slate-800 e hover:text-blue-900 === */}
+                                                            <div className="font-medium text-sm text-slate-800 group-hover:text-blue-900 transition-colors">{res.text}</div>
+                                                            {res.details && <div className="text-xs font-medium text-slate-500 mt-1 truncate">{res.details}</div>}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -336,7 +345,7 @@ function App() {
                                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
                                 updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
                                 updateKSM={updateKSM} isEditor={isEditor} 
-                                searchFocusItem={searchFocusItem} // PASSIAMO IL FOCUS
+                                searchFocusItem={searchFocusItem}
                             />
                         )}
                     </div>
