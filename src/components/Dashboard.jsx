@@ -190,7 +190,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                         
                         <select value={filterFocus} onChange={e => setFilterFocus(e.target.value)} className="bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer hover:border-gray-300 transition-colors">
                             <option value="all">Nessun Filtro Valore</option>
-                            <option value="priority">🔥 Alta Priorità (Impact &ge; 8)</option>
+                            <option value="priority">🔥 Alta Priorità (Impact {'>='} 8)</option>
                             <option value="quickwins">🚀 Quick Wins (Basso Sforzo)</option>
                             <option value="major">👑 Major Projects (Alto Sforzo)</option>
                         </select>
