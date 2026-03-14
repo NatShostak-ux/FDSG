@@ -198,9 +198,9 @@ function App() {
                         
                         {/* SWITCHER SCENARI MINIMALISTA */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Scenario in visione</span>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block whitespace-nowrap">Scenario in visione</span>
                             
-                            <div className="flex items-center bg-slate-100 p-1 rounded-lg">
+                            <div className="flex items-center bg-slate-100 p-1 rounded-lg overflow-x-auto w-full md:w-auto flex-nowrap">
                                 {/* .reverse() inverte l'array per mostrare prima la FASE 1, poi FASE 2A, poi FASE 2B */}
                                 {[...scenarios].reverse().map((s) => {
                                     const isActive = s.id === activeScenarioId;
@@ -208,7 +208,7 @@ function App() {
                                         <button
                                             key={s.id}
                                             onClick={() => setActiveScenarioId(s.id)}
-                                            className={`px-4 py-1.5 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all truncate max-w-[200px] ${
+                                            className={`px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all whitespace-nowrap flex-shrink-0 ${
                                                 isActive 
                                                 ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
                                                 : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
@@ -232,7 +232,15 @@ function App() {
                     
                     <div className="flex-grow min-w-0 transition-all duration-300">
                         {activeView === 'dashboard' ? (
-                            <Dashboard activeScenario={activeScenario} setActiveView={setActiveView} updateProjectBatch={handleBatchUpdateProject} isEditor={isEditor} />
+                            {/* === LA MODIFICA È ESATTAMENTE QUI: HO AGGIUNTO scenarios e setActiveScenarioId === */}
+                            <Dashboard 
+                                activeScenario={activeScenario} 
+                                setActiveView={setActiveView} 
+                                updateProjectBatch={handleBatchUpdateProject} 
+                                isEditor={isEditor} 
+                                scenarios={scenarios} 
+                                setActiveScenarioId={setActiveScenarioId} 
+                            />
                         ) : (
                             <AreaEditor
                                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
