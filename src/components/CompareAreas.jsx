@@ -51,28 +51,28 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
         }
     };
 
-    // APERTURA MODALE: Salviamo esplicitamente l'areaId per la navigazione
     const handleProjectClick = (project, areaDef) => {
         setModalProject({
             ...project,
-            areaId: areaDef.id, // Salviamo l'ID reale dell'area
+            areaId: areaDef.id,
             areaLabel: areaDef.label,
             areaColor: areaDef.hex
         });
     };
 
-    // FIX TASTO MODIFICA: Ora usa l'areaId salvato correttamente
     const handleGoToEdit = () => {
         if (modalProject && modalProject.areaId) {
-            // 1. Impostiamo il focus per illuminare il progetto all'arrivo
+            // Se abbiamo la funzione di focus, prepariamo l'illuminazione
             if (setSearchFocusItem) {
                 setSearchFocusItem({ type: 'project', id: modalProject.id });
             }
-            // 2. Cambiamo la vista sull'area corretta
+            
+            // Cambiamo vista all'area corretta
             setActiveView(modalProject.areaId);
-            // 3. Chiudiamo la modale e resettiamo lo scroll
+            
+            // Chiudiamo modale e resettiamo scroll
             setModalProject(null);
-            window.scrollTo(0, 0);
+            setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
         }
     };
 
@@ -168,10 +168,10 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
     return (
         <div className="space-y-6 animate-fadeIn pb-20">
             
-            {/* POP-UP DETTAGLIO SINGOLO PROGETTO */}
+            {/* MODALE DETTAGLIO */}
             {modalProject && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 animate-fadeIn" onClick={() => setModalProject(null)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                         
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center relative">
                             <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: modalProject.areaColor }}></div>
@@ -179,24 +179,24 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
                             </div>
-                            <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
+                            <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
                         </div>
                         
                         <div className="p-8 overflow-y-auto custom-scrollbar bg-white">
                             <h2 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">{modalProject.title || 'Iniziativa senza titolo'}</h2>
                             
                             <div className="flex flex-wrap items-center gap-4 mb-8">
-                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-xs font-bold text-slate-700">
                                     <Calendar size={14} className="text-slate-400" />
-                                    <span className="text-xs font-bold text-slate-700">{modalProject.start} <span className="text-slate-400 font-normal mx-1">→</span> {modalProject.end}</span>
+                                    {modalProject.start} → {modalProject.end}
                                 </div>
-                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-xs font-bold text-slate-700">
                                     <TargetIcon size={14} className="text-slate-400" />
-                                    <span className="text-xs font-bold text-slate-700">Impatto: <span style={{ color: modalProject.areaColor }}>{modalProject.impact}/10</span></span>
+                                    Impatto: <span style={{ color: modalProject.areaColor }}>{modalProject.impact}/10</span>
                                 </div>
-                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-xs font-bold text-slate-700">
                                     <Activity size={14} className="text-slate-400" />
-                                    <span className="text-xs font-bold text-slate-700">Sforzo: {modalProject.effort}/10</span>
+                                    Sforzo: {modalProject.effort}/10
                                 </div>
                             </div>
 
@@ -222,7 +222,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                             )}
                         </div>
 
-                        <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                        <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex justify-end gap-3">
                             <Button variant="secondary" onClick={() => setModalProject(null)}>Chiudi</Button>
                             <Button onClick={handleGoToEdit}>Modifica Iniziativa</Button>
                         </div>
@@ -230,7 +230,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                 </div>
             )}
 
-            {/* HEADER CONFIGURATORE */}
+            {/* CONFIGURATORE UI */}
             <div className="bg-white rounded-[24px] border border-gray-200 p-8 shadow-sm">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="p-3 bg-yellow-50 rounded-xl">
@@ -244,20 +244,13 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <Columns3 size={14}/> 1. Seleziona le aree (Colonne)
-                        </h3>
-                        <div 
-                            onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'area')}
-                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30"
-                        >
-                            {selectedAreas.length === 0 && (
-                                <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina le aree qui</div>
-                            )}
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Columns3 size={14}/> 1. Aree (Colonne)</h3>
+                        <div onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'area')} className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30">
+                            {selectedAreas.length === 0 && <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina aree qui</div>}
                             {selectedAreas.map(id => {
                                 const area = EXPERTISE_AREAS.find(a => a.id === id);
                                 return (
-                                    <div key={id} className="h-10 px-4 rounded-full text-white font-bold text-[13px] flex items-center gap-3 shadow-sm animate-fadeIn" style={{ backgroundColor: area?.hex }}>
+                                    <div key={id} className="h-10 px-4 rounded-full text-white font-bold text-[13px] flex items-center gap-3 shadow-sm" style={{ backgroundColor: area?.hex }}>
                                         {area && <area.icon size={16} />} {area?.label}
                                         <X size={16} className="cursor-pointer hover:bg-white/20 rounded-full" onClick={() => toggleArea(id)} />
                                     </div>
@@ -266,7 +259,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2">
                             {EXPERTISE_AREAS.filter(a => !selectedAreas.includes(a.id)).map(a => (
-                                <button key={a.id} draggable onDragStart={(e) => onDragStart(e, a.id, 'area')} onClick={() => toggleArea(a.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
+                                <button key={a.id} draggable onDragStart={(e) => onDragStart(e, a.id, 'area')} onClick={() => toggleArea(a.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 shadow-sm">
                                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: a.hex }}></div> {a.label}
                                 </button>
                             ))}
@@ -274,20 +267,13 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <Rows3 size={14}/> 2. Seleziona le voci (Righe)
-                        </h3>
-                        <div 
-                            onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'field')}
-                            className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30"
-                        >
-                            {selectedFields.length === 0 && (
-                                <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina le voci qui</div>
-                            )}
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2"><Rows3 size={14}/> 2. Voci (Righe)</h3>
+                        <div onDragOver={onDragOver} onDrop={(e) => onDrop(e, 'field')} className="min-h-[100px] border-2 border-dashed border-gray-100 rounded-[20px] p-4 flex flex-wrap gap-3 bg-slate-50/30">
+                            {selectedFields.length === 0 && <div className="w-full flex items-center justify-center text-gray-300 text-xs italic">Trascina voci qui</div>}
                             {selectedFields.map(id => {
                                 const field = AVAILABLE_FIELDS.find(f => f.id === id);
                                 return (
-                                    <div key={id} className="h-10 px-4 rounded-full bg-[#1e293b] text-white font-bold text-[13px] flex items-center gap-3 shadow-sm animate-fadeIn">
+                                    <div key={id} className="h-10 px-4 rounded-full bg-[#1e293b] text-white font-bold text-[13px] flex items-center gap-3 shadow-sm">
                                         {field && <field.icon size={16} className="text-yellow-500" />} {field?.label}
                                         <X size={16} className="cursor-pointer hover:bg-white/20 rounded-full" onClick={() => toggleField(id)} />
                                     </div>
@@ -296,7 +282,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2">
                             {AVAILABLE_FIELDS.filter(f => !selectedFields.includes(f.id)).map(f => (
-                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(f.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
+                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(f.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 shadow-sm">
                                     <f.icon size={14} className="text-gray-400" /> {f.label}
                                 </button>
                             ))}
@@ -305,7 +291,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                 </div>
             </div>
 
-            {/* TABELLA CONFRONTO */}
+            {/* TABELLA */}
             {selectedAreas.length > 0 && selectedFields.length > 0 ? (
                 <div className="bg-white rounded-[24px] border border-gray-200 shadow-xl overflow-hidden animate-fadeIn">
                     <div className="overflow-x-auto">
@@ -318,9 +304,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                                         return (
                                             <th key={id} className="p-8 border-b border-l border-gray-100 bg-white min-w-[350px]">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="p-3 rounded-2xl text-white shadow-lg" style={{ backgroundColor: area?.hex }}>
-                                                        {area && <area.icon size={24} />}
-                                                    </div>
+                                                    <div className="p-3 rounded-2xl text-white shadow-lg" style={{ backgroundColor: area?.hex }}>{area && <area.icon size={24} />}</div>
                                                     <span className="font-bold text-gray-900 text-[20px]">{area?.label}</span>
                                                 </div>
                                             </th>
@@ -333,10 +317,8 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                                     const field = AVAILABLE_FIELDS.find(f => f.id === fid);
                                     return (
                                         <tr key={fid} className="group">
-                                            <td className="p-6 border-b border-gray-100 font-bold text-[11px] text-gray-400 uppercase tracking-[0.1em] bg-white sticky left-0 z-10 align-top group-hover:bg-blue-50/50 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    {field && <field.icon size={18} />} {field?.label}
-                                                </div>
+                                            <td className="p-6 border-b border-gray-100 font-bold text-[11px] text-gray-400 uppercase bg-white sticky left-0 z-10 align-top group-hover:bg-blue-50/50 transition-colors">
+                                                <div className="flex items-center gap-3">{field && <field.icon size={18} />} {field?.label}</div>
                                             </td>
                                             {selectedAreas.map(aid => (
                                                 <td key={`${aid}-${fid}`} className="p-8 border-b border-l border-gray-50 bg-white align-top group-hover:bg-slate-50/30 transition-colors">
@@ -352,9 +334,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                 </div>
             ) : (
                 <div className="bg-white/50 border-2 border-dashed border-gray-200 rounded-[24px] p-20 flex flex-col items-center justify-center text-center">
-                    <div className="p-4 bg-gray-100 rounded-full mb-6">
-                        <Info size={32} className="text-gray-400" />
-                    </div>
+                    <Info size={32} className="text-gray-400 mb-4" />
                     <p className="text-[16px] font-medium text-gray-500">Configura la matrice selezionando Aree e Voci in alto</p>
                 </div>
             )}
