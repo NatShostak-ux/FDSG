@@ -5,7 +5,8 @@ import GanttChart from './GanttChart';
 import RadarChart from './RadarChart';
 import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
-import { getStrategicRole } from './AreaEditor';
+// Importiamo anche STRATEGIC_ROLES per popolare il menu a tendina
+import { STRATEGIC_ROLES, getStrategicRole } from './AreaEditor';
 
 const SHOW_FINANCIALS_AND_LIST = false; 
 
@@ -15,7 +16,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     // Stati per i Filtri Strategici
     const [filterArea, setFilterArea] = useState('all');
     const [filterTime, setFilterTime] = useState('all');
-    const [filterFocus, setFilterFocus] = useState('all');
+    const [filterRole, setFilterRole] = useState('all'); // Nuovo stato per il Ruolo Strategico
 
     // Stato per KSM Collassabili
     const [expandedKSMs, setExpandedKSMs] = useState({});
@@ -51,12 +52,12 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
     // === APPLICAZIONE FILTRI SUL GANTT ===
     let filteredProjects = allProjects;
 
-    // Filtro Area
+    // 1. Filtro Area
     if (filterArea !== 'all') {
         filteredProjects = filteredProjects.filter(p => p.areaId === filterArea);
     }
 
-    // Filtro Tempo
+    // 2. Filtro Tempo
     if (filterTime === '2026') {
         filteredProjects = filteredProjects.filter(p => p.start.startsWith('2026') || p.end.startsWith('2026'));
     } else if (filterTime === '2027') {
@@ -65,13 +66,14 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
         filteredProjects = filteredProjects.filter(p => p.start === '2026-01' || p.start === '2026-02' || p.start === '2026-03' || p.start === '2026-04' || p.start === '2026-05' || p.start === '2026-06');
     }
 
-    // Filtro Focus/Priorità
-    if (filterFocus === 'quickwins') {
-        filteredProjects = filteredProjects.filter(p => p.impact >= 7 && p.effort <= 4);
-    } else if (filterFocus === 'major') {
-        filteredProjects = filteredProjects.filter(p => p.impact >= 7 && p.effort >= 7);
-    } else if (filterFocus === 'priority') {
-        filteredProjects = filteredProjects.filter(p => p.impact >= 8);
+    // 3. Filtro Ruolo Strategico
+    if (filterRole !== 'all') {
+        const roleVal = parseInt(filterRole, 10);
+        filteredProjects = filteredProjects.filter(p => {
+            const areaScore = activeScenario.data[p.areaId]?.importance || 0;
+            const role = getStrategicRole(areaScore);
+            return role.value === roleVal;
+        });
     }
 
     return (
@@ -188,11 +190,12 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                             <option value="2027">Focus 2027</option>
                         </select>
                         
-                        <select value={filterFocus} onChange={e => setFilterFocus(e.target.value)} className="bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer hover:border-gray-300 transition-colors">
-                            <option value="all">Nessun Filtro Valore</option>
-                            <option value="priority">🔥 Alta Priorità (Impact {'>='} 8)</option>
-                            <option value="quickwins">🚀 Quick Wins (Basso Sforzo)</option>
-                            <option value="major">👑 Major Projects (Alto Sforzo)</option>
+                        {/* FILTRO RUOLO STRATEGICO AGGIORNATO */}
+                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer hover:border-gray-300 transition-colors">
+                            <option value="all">Tutti i Ruoli Strategici</option>
+                            {STRATEGIC_ROLES.map(role => (
+                                <option key={role.id} value={role.value}>{role.icon} {role.label}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -202,7 +205,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                         projects={filteredProjects} 
                         areas={EXPERTISE_AREAS} 
                         showSwimlanes={filterArea === 'all'} 
-                        activeAreaId={filterArea !== 'all' ? filterArea : null} // <--- LA MODIFICA È QUI!
+                        activeAreaId={filterArea !== 'all' ? filterArea : null}
                         onUpdateProject={updateProjectBatch} 
                     />
                     {filteredProjects.length === 0 && (
