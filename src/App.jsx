@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, LogOut, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, Trash2, LogOut, ArrowLeft, Search, X, ChevronRight } from 'lucide-react';
 import Button from './components/ui/Button';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -22,6 +22,10 @@ function App() {
   const [isEditor, setIsEditor] = useState(false);
   
   const [appMode, setAppMode] = useState('master'); // 'master' | 'scenario'
+
+  // Stati per la Ricerca Globale
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -72,9 +76,58 @@ function App() {
     }
   };
 
-  // NAVIGAZIONE: TASTO INDIETRO
   const handleBackToMaster = () => {
       setAppMode('master');
+      window.scrollTo(0, 0);
+  };
+
+  // === LOGICA RICERCA GLOBALE ===
+  const searchResults = useMemo(() => {
+      if (!searchQuery || searchQuery.length < 2) return [];
+      const q = searchQuery.toLowerCase();
+      const results = [];
+
+      (scenarios || []).forEach(scenario => {
+          Object.entries(scenario.data || {}).forEach(([areaId, areaData]) => {
+              const areaDef = EXPERTISE_AREAS.find(a => a.id === areaId);
+              const areaLabel = areaDef ? areaDef.label : areaId;
+              const pathStr = `${scenario.title || 'Scenario'} > ${areaLabel}`;
+
+              const addResult = (type, text, details = '') => {
+                  results.push({ id: Math.random().toString(), scenarioId: scenario.id, areaId, type, text, details, pathStr, areaColor: areaDef?.hex || '#999' });
+              };
+
+              if (areaData.objectives?.toLowerCase().includes(q)) addResult('Obiettivo', areaData.objectives.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...');
+              
+              [1, 2, 3].forEach(y => {
+                  if (areaData[`evolution_y${y}`]?.toLowerCase().includes(q)) addResult(`Phasing Anno ${y}`, areaData[`evolution_y${y}`].replace(/<[^>]*>?/gm, '').substring(0, 100) + '...');
+              });
+
+              (Array.isArray(areaData.projects) ? areaData.projects : []).forEach(p => {
+                  if (p.title?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)) {
+                      addResult('Progetto', p.title || 'Senza Titolo', p.description?.replace(/<[^>]*>?/gm, '').substring(0, 60));
+                  }
+              });
+
+              (Array.isArray(areaData.ksms) ? areaData.ksms : []).forEach(k => {
+                  if (k.name?.toLowerCase().includes(q) || k.description?.toLowerCase().includes(q)) {
+                      addResult('Metrica (KSM)', k.name || 'Metrica', k.targetValue ? `Target: ${k.targetValue}` : '');
+                  }
+              });
+
+              (Array.isArray(areaData.routine) ? areaData.routine : []).forEach(r => {
+                  if (r.text?.toLowerCase().includes(q)) addResult('Task Day-by-Day', r.text);
+              });
+          });
+      });
+      return results;
+  }, [searchQuery, scenarios]);
+
+  const handleResultClick = (res) => {
+      setActiveScenarioId(res.scenarioId);
+      setActiveView(res.areaId);
+      setSearchQuery('');
+      setIsSearchFocused(false);
       window.scrollTo(0, 0);
   };
 
@@ -158,7 +211,6 @@ function App() {
             <img src="/arad-logo.png" alt="ARAD Digital" className="h-10 w-auto object-contain" />
             <div className="h-6 w-px bg-gray-300"></div>
             
-            {/* Tasto Indietro o Testo Standard */}
             {appMode === 'scenario' ? (
                 <button 
                     onClick={handleBackToMaster} 
@@ -196,12 +248,58 @@ function App() {
                 <div className="mb-8">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
                         
-                        {/* SWITCHER SCENARI MINIMALISTA */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block whitespace-nowrap">Scenario in visione</span>
+                        {/* SWITCHER SCENARI E RICERCA GLOBALE */}
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4 relative z-50">
                             
-                            <div className="flex items-center bg-slate-100 p-1 rounded-lg overflow-x-auto w-full md:w-auto flex-nowrap">
-                                {/* .reverse() inverte l'array per mostrare prima la FASE 1, poi FASE 2A, poi FASE 2B */}
+                            <div className="flex items-center gap-6 flex-grow">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block whitespace-nowrap">Scenario in visione</span>
+                                
+                                {/* BARRA DI RICERCA GLOBALE */}
+                                <div className="relative flex-grow max-w-md hidden md:block">
+                                    <div className={`flex items-center bg-slate-50 rounded-lg transition-all border ${isSearchFocused ? 'ring-2 ring-blue-100 border-blue-300 bg-white' : 'border-gray-200'}`}>
+                                        <Search size={16} className="text-gray-400 ml-3 flex-shrink-0" />
+                                        <input 
+                                            type="text" 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onFocus={() => setIsSearchFocused(true)}
+                                            onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                                            placeholder="Cerca progetti, metriche, obiettivi..."
+                                            className="w-full bg-transparent border-0 py-2 px-3 text-gray-700 placeholder-gray-400 focus:ring-0 text-sm font-medium"
+                                        />
+                                        {searchQuery && (
+                                            <button onClick={() => setSearchQuery('')} className="pr-3 text-gray-400 hover:text-gray-600"><X size={14}/></button>
+                                        )}
+                                    </div>
+
+                                    {/* DROPDOWN RISULTATI RICERCA */}
+                                    {isSearchFocused && searchQuery.length >= 2 && (
+                                        <div className="absolute top-[calc(100%+8px)] left-0 w-full md:w-[500px] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden max-h-[60vh] overflow-y-auto z-[100]">
+                                            {searchResults.length === 0 ? (
+                                                <div className="p-8 text-center text-gray-500 font-medium">Nessun risultato trovato per "{searchQuery}"</div>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <div className="bg-slate-50 px-4 py-2 text-[10px] font-bold tracking-widest uppercase text-gray-500 border-b border-gray-100">
+                                                        {searchResults.length} Risultati trovati
+                                                    </div>
+                                                    {searchResults.map((res, idx) => (
+                                                        <div key={idx} onClick={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
+                                                                <span className="text-[10px] font-bold text-gray-400 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
+                                                            </div>
+                                                            <div className="font-bold text-sm text-gray-900 group-hover:text-blue-700 transition-colors">{res.text}</div>
+                                                            {res.details && <div className="text-xs text-gray-500 mt-1 truncate">{res.details}</div>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center bg-slate-100 p-1 rounded-lg overflow-x-auto w-full xl:w-auto flex-nowrap">
                                 {[...scenarios].reverse().map((s) => {
                                     const isActive = s.id === activeScenarioId;
                                     return (
@@ -232,14 +330,10 @@ function App() {
                     
                     <div className="flex-grow min-w-0 transition-all duration-300">
                         {activeView === 'dashboard' ? (
-                            {/* === LA MODIFICA È ESATTAMENTE QUI: HO AGGIUNTO scenarios e setActiveScenarioId === */}
                             <Dashboard 
                                 activeScenario={activeScenario} 
                                 setActiveView={setActiveView} 
                                 updateProjectBatch={handleBatchUpdateProject} 
-                                isEditor={isEditor} 
-                                scenarios={scenarios} 
-                                setActiveScenarioId={setActiveScenarioId} 
                             />
                         ) : (
                             <AreaEditor
