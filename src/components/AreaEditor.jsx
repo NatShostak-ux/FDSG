@@ -6,8 +6,6 @@ import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
-// === INTERRUTTORE FEATURE FLAG ===
-// Cambia questo valore in 'true' quando vorrai mostrare di nuovo le informazioni sul budget
 const SHOW_BUDGET = false; 
 
 export const STRATEGIC_ROLES = [
@@ -27,12 +25,11 @@ export const getStrategicRole = (val) => {
     return STRATEGIC_ROLES[4];
 };
 
-// Funzione helper per generare ID univoci e sicuri
 const generateUniqueId = (prefix) => {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false }) => {
+const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null }) => {
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -43,7 +40,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
     const rawProjects = Array.isArray(data.projects) ? data.projects : [];
-    // Aggiungiamo l'areaId solo per la visualizzazione locale
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area.id }));
 
     const areaBudgetMin = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMin) || 0), 0);
@@ -56,22 +52,45 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
     }, [activeView]);
 
+    // === GESTIONE FOCUS RICERCA (SCROLL + HIGHLIGHT) ===
+    useEffect(() => {
+        if (searchFocusItem) {
+            if (searchFocusItem.type === 'project') {
+                setSelectedProjectId(searchFocusItem.id);
+            }
+            
+            // Timeout leggero per dare tempo a React di renderizzare i pannelli aperti
+            setTimeout(() => {
+                let targetId = '';
+                if (searchFocusItem.type === 'objective') targetId = 'target-objective';
+                if (searchFocusItem.type === 'phasing') targetId = `target-phasing-${searchFocusItem.id}`;
+                if (searchFocusItem.type === 'project') targetId = 'target-project-details';
+                if (searchFocusItem.type === 'ksm') targetId = `target-ksm-${searchFocusItem.id}`;
+                if (searchFocusItem.type === 'routine') targetId = `target-routine-${searchFocusItem.id}`;
+
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Effetto highlight luminoso
+                    el.style.transition = 'all 0.4s ease-out';
+                    el.style.boxShadow = '0 0 0 6px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2)';
+                    el.style.backgroundColor = '#f0f9ff'; // Azzurro molto chiaro
+                    
+                    setTimeout(() => {
+                        el.style.boxShadow = 'none';
+                        el.style.backgroundColor = 'transparent'; // Torna normale
+                    }, 2500); // L'highlight svanisce dopo 2.5 secondi
+                }
+            }, 150);
+        }
+    }, [searchFocusItem, activeView]);
+
     const addProject = () => {
         if (!isEditor) return;
         const newId = generateUniqueId('proj');
-        
-        // Salviamo usando rawProjects (senza inquinare il DB con l'areaId)
         updateAreaData(activeView, 'projects', [...rawProjects, { 
-            id: newId, 
-            title: '', 
-            description: '', 
-            enablers: [""], 
-            start: `${GANTT_START_YEAR}-01`, 
-            end: `${GANTT_START_YEAR}-04`, 
-            impact: 5, 
-            effort: 5, 
-            budgetMin: 0, 
-            budgetMax: 0 
+            id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 
         }]);
         setSelectedProjectId(newId);
     };
@@ -100,8 +119,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const addKSM = () => {
         if (!isEditor) return;
-        const newId = generateUniqueId('ksm');
-        updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+        updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: generateUniqueId('ksm'), name: '', valueAsIs: '', targetValue: '', description: '' }]);
     };
 
     const removeKSM = (ksmId) => {
@@ -111,8 +129,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     const handleAddRoutineTask = () => {
         if (!newRoutineTask.trim() || !isEditor) return;
-        const newId = generateUniqueId('task');
-        updateAreaData(activeView, 'routine', [...routineTasks, { id: newId, text: newRoutineTask.trim(), completed: false }]);
+        updateAreaData(activeView, 'routine', [...routineTasks, { id: generateUniqueId('task'), text: newRoutineTask.trim(), completed: false }]);
         setNewRoutineTask("");
     };
 
@@ -144,7 +161,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={20} /></button>
                         </div>
                         <div className="p-6">
-                            {/* Inserita key per forzare il refresh */}
                             <AdvancedEditor key={`notes-${activeView}`} value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} />
                         </div>
                         <div className="px-6 py-4 bg-gray-50 flex justify-end"><Button onClick={() => setIsNotesOpen(false)} variant="secondary">Chiudi</Button></div>
@@ -206,17 +222,17 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </div>
 
             <Card title="Obiettivi Macro" icon={Target}>
-                {/* Inserita key per forzare il refresh */}
-                <AdvancedEditor key={`obj-${activeView}`} value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Quali sono gli obiettivi dell'area per garantire l'aderenza al modello strategico in oggetto? (elenco numerato)`} disabled={!isEditor} />
+                <div id="target-objective" className="rounded-lg">
+                    <AdvancedEditor key={`obj-${activeView}`} value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Quali sono gli obiettivi dell'area per garantire l'aderenza al modello strategico in oggetto? (elenco numerato)`} disabled={!isEditor} />
+                </div>
             </Card>
 
             <Card title="Descrizione Qualitativa del Phasing" icon={Calendar}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                     {[1, 2, 3].map(year => (
-                        <div key={year} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
+                        <div key={year} id={`target-phasing-${year}`} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
                             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Anno {year}</div>
                             <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden [&>div]:flex-grow [&>div]:flex [&>div]:flex-col">
-                                {/* Inserita key per forzare il refresh */}
                                 <AdvancedEditor key={`evo-${activeView}-${year}`} value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
                             </div>
                         </div>
@@ -228,9 +244,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                     <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} activeAreaId={area.id} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
                 </div>
-                <div className="p-6 bg-white min-h-[300px]">
+                <div className="p-6 bg-white min-h-[300px]" id="target-project-details">
                     {selectedProject ? (
-                        <div className="animate-fadeIn">
+                        <div className="animate-fadeIn rounded-xl p-2">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2 text-sm text-gray-400 font-medium"><span>Progetti</span><ChevronRight size={14} /><span style={{ color: area.hex }}>{selectedProject.title || 'Senza nome'}</span></div>
                                 {isEditor && <button onClick={() => removeProject(selectedProject.id)} className="text-xs text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>}
@@ -295,7 +311,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         <div className="text-gray-400 italic text-sm">Nessuna metrica definita.</div>
                     ) : (
                         data.ksms.map((ksm) => (
-                            <div key={ksm.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
+                            <div key={ksm.id} id={`target-ksm-${ksm.id}`} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
                                 {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600"><Trash2 size={18} /></button>}
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
@@ -307,7 +323,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
-                                    {/* Inserita key per forzare il refresh */}
                                     <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} />
                                 </div>
                             </div>
@@ -329,7 +344,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     ) : (
                         <div className="space-y-2 mt-4">
                             {routineTasks.map((task) => (
-                                <div key={task.id} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                                <div key={task.id} id={`target-routine-${task.id}`} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl rounded-lg">
                                     <div className="flex items-start gap-3 flex-grow">
                                         <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>
                                             {task.completed && <Check size={12} strokeWidth={3} />}
