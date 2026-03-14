@@ -6,6 +6,10 @@ import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
 import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
+// === INTERRUTTORE FEATURE FLAG ===
+// Cambia questo valore in 'true' quando vorrai mostrare di nuovo le informazioni sul budget
+const SHOW_BUDGET = false; 
+
 export const STRATEGIC_ROLES = [
     { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
     { id: 'core', value: 4, label: '4 - Core', icon: '⭐', title: '4 - Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane." },
@@ -191,10 +195,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </div>
                             )}
                         </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-center min-w-[180px]">
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Budget Totale Area</span>
-                            <div className="font-bold text-lg text-gray-800">€ {areaBudgetMin.toLocaleString('it-IT')} - {areaBudgetMax.toLocaleString('it-IT')}</div>
-                        </div>
+                        {SHOW_BUDGET && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-center min-w-[180px]">
+                                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Budget Totale Area</span>
+                                <div className="font-bold text-lg text-gray-800">€ {areaBudgetMin.toLocaleString('it-IT')} - {areaBudgetMax.toLocaleString('it-IT')}</div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -240,10 +246,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32 text-right" />
                                         </div>
                                     </div>
-                                    <div className="space-y-2 w-64">
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Budget (€)</label>
-                                        <div className="flex items-center gap-2 h-11"><input type="number" placeholder="Min" value={selectedProject.budgetMin ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMin', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /><span className="text-gray-300">-</span><input type="number" placeholder="Max" value={selectedProject.budgetMax ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMax', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /></div>
-                                    </div>
+                                    
+                                    {SHOW_BUDGET && (
+                                        <div className="space-y-2 w-64">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Budget (€)</label>
+                                            <div className="flex items-center gap-2 h-11"><input type="number" placeholder="Min" value={selectedProject.budgetMin ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMin', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /><span className="text-gray-300">-</span><input type="number" placeholder="Max" value={selectedProject.budgetMax ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMax', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /></div>
+                                        </div>
+                                    )}
+
                                     <div className="flex gap-4">
                                         <div className="space-y-2 w-20 text-center">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priorità</label>
@@ -257,10 +267,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </div>
                                 <div className="space-y-4">
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrizione Iniziativa</label>
-                                    
-                                    {/* === LA CHIAVE CHE RISOLVE IL BUG È QUI === */}
                                     <AdvancedEditor key={`desc-${selectedProject.id}`} value={selectedProject.description || ''} onChange={(val) => updateProject(activeView, selectedProject.id, 'description', val)} disabled={!isEditor} />
-                                
                                 </div>
                                 <div className="space-y-4 pt-6">
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abilitatori Chiave (Key Enablers)</label>
