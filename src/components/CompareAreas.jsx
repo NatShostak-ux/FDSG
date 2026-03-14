@@ -54,12 +54,14 @@ const CompareAreas = ({ activeScenario }) => {
                 return (areaData.projects || []).length > 0 ? (
                     <div className="space-y-3">
                         {areaData.projects.map(p => (
-                            <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: areaDef?.hex }}></div>
+                            <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative">
+                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <div className="flex items-center gap-2 pl-2">
+                                    {/* === ICONA AGGIORNATA QUI: UGUALE ALLA SIDEBAR === */}
+                                    {areaDef?.icon && <areaDef.icon size={16} style={{ color: areaDef?.hex }} />}
                                     <span className="font-bold text-[14px] text-gray-900">{p.title || 'Senza Titolo'}</span>
                                 </div>
-                                <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide">
+                                <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide pl-2">
                                     <span>{p.start} &rarr; {p.end}</span>
                                     <span>Effort: {p.effort} | Impatto: {p.impact}</span>
                                 </div>
@@ -78,9 +80,10 @@ const CompareAreas = ({ activeScenario }) => {
                 return (
                     <div className="space-y-4">
                         {years.map(y => (
-                            <div key={y} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Anno {y}</div>
-                                <div className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: areaData[`evolution_y${y}`] }} />
+                            <div key={y} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 relative">
+                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">Anno {y}</div>
+                                <div className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none pl-2" dangerouslySetInnerHTML={{ __html: areaData[`evolution_y${y}`] }} />
                             </div>
                         ))}
                     </div>
@@ -91,11 +94,15 @@ const CompareAreas = ({ activeScenario }) => {
                 return ksms.length > 0 ? (
                     <div className="space-y-3">
                         {ksms.map(k => (
-                            <div key={k.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-                                <div className="font-bold text-sm text-gray-800 mb-1">{k.name}</div>
-                                <div className="flex gap-4 text-[11px]">
-                                    <span className="text-gray-400 font-bold uppercase">As Is: <span className="text-gray-700">{k.valueAsIs || '-'}</span></span>
-                                    <span className="text-blue-600 font-bold uppercase">Target: {k.targetValue || '-'}</span>
+                            <div key={k.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-3">
+                                {/* === PUNTINO KSM RISOLTO === */}
+                                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <div>
+                                    <div className="font-bold text-sm text-gray-800 mb-0.5">{k.name}</div>
+                                    <div className="flex gap-4 text-[11px]">
+                                        <span className="text-gray-400 font-bold uppercase tracking-wide">As Is: <span className="text-gray-700">{k.valueAsIs || '-'}</span></span>
+                                        <span className="text-blue-600 font-bold uppercase tracking-wide">Target: {k.targetValue || '-'}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -106,9 +113,11 @@ const CompareAreas = ({ activeScenario }) => {
                 return (areaData.routine || []).length > 0 ? (
                     <ul className="space-y-2">
                         {areaData.routine.map(t => (
-                            <li key={t.id} className="flex items-start gap-2 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
-                                <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                                <span>{t.text}</span>
+                            <li key={t.id} className="flex items-start gap-2.5 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100 relative overflow-hidden">
+                                {/* === ICONA ROUTINE RISOLTA === */}
+                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: areaDef?.hex }}></div>
+                                <Clock size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                <span className="leading-snug">{t.text}</span>
                             </li>
                         ))}
                     </ul>
@@ -182,7 +191,7 @@ const CompareAreas = ({ activeScenario }) => {
                         </div>
                         <div className="flex flex-wrap gap-2 pt-2">
                             {AVAILABLE_FIELDS.filter(f => !selectedFields.includes(f.id)).map(f => (
-                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(f.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all">
+                                <button key={f.id} draggable onDragStart={(e) => onDragStart(e, f.id, 'field')} onClick={() => toggleField(id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all">
                                     <f.icon size={14} className="text-gray-400" /> {f.label}
                                 </button>
                             ))}
@@ -218,14 +227,14 @@ const CompareAreas = ({ activeScenario }) => {
                                 {selectedFields.map(fid => {
                                     const field = AVAILABLE_FIELDS.find(f => f.id === fid);
                                     return (
-                                        <tr key={fid}>
-                                            <td className="p-6 border-b border-gray-100 font-bold text-[11px] text-gray-400 uppercase tracking-[0.1em] bg-white sticky left-0 z-10 align-top">
+                                        <tr key={fid} className="group">
+                                            <td className="p-6 border-b border-gray-100 font-bold text-[11px] text-gray-400 uppercase tracking-[0.1em] bg-white sticky left-0 z-10 align-top group-hover:bg-blue-50/50 transition-colors">
                                                 <div className="flex items-center gap-3">
                                                     <field.icon size={18} /> {field?.label}
                                                 </div>
                                             </td>
                                             {selectedAreas.map(aid => (
-                                                <td key={`${aid}-${fid}`} className="p-8 border-b border-l border-gray-50 bg-white align-top">
+                                                <td key={`${aid}-${fid}`} className="p-8 border-b border-l border-gray-50 bg-white align-top group-hover:bg-slate-50/30 transition-colors">
                                                     {renderCellContent(aid, fid)}
                                                 </td>
                                             ))}
