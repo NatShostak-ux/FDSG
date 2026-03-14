@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Target, List, TrendingUp, Activity, Clock, Award, X, Columns3, Rows3, Info, ArrowRightLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, List, TrendingUp, Activity, Clock, Award, X, Columns3, Rows3, Info, ArrowRightLeft, Zap, Calendar, Target as TargetIcon } from 'lucide-react';
 import { EXPERTISE_AREAS } from '../utils/constants';
 import { getStrategicRole } from './AreaEditor';
+import Button from './ui/Button';
 
 const AVAILABLE_FIELDS = [
     { id: 'objectives', label: 'Obiettivi Macro', icon: Target },
@@ -12,9 +13,22 @@ const AVAILABLE_FIELDS = [
     { id: 'routine', label: 'Attività Day-by-Day', icon: Clock }
 ];
 
-const CompareAreas = ({ activeScenario }) => {
+const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => {
     const [selectedAreas, setSelectedAreas] = useState([]);
     const [selectedFields, setSelectedFields] = useState([]);
+    
+    // STATO PER IL POP-UP PROGETTO
+    const [modalProject, setModalProject] = useState(null);
+
+    // BLOCCO SCROLL QUANDO MODALE APERTA
+    useEffect(() => {
+        if (modalProject) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => { document.body.style.overflow = 'unset'; };
+    }, [modalProject]);
 
     const toggleArea = (areaId) => {
         setSelectedAreas(prev => prev.includes(areaId) ? prev.filter(id => id !== areaId) : [...prev, areaId]);
@@ -40,6 +54,28 @@ const CompareAreas = ({ activeScenario }) => {
         }
     };
 
+    // APRE IL POP-UP (Recupera i dati completi del progetto)
+    const handleProjectClick = (project, areaDef) => {
+        setModalProject({
+            ...project,
+            areaLabel: areaDef.label,
+            areaColor: areaDef.hex
+        });
+    };
+
+    // FUNZIONE "MODIFICA INIZIATIVA" (Teletrasporto all'editor)
+    const handleGoToEdit = () => {
+        if (modalProject) {
+            if (setSearchFocusItem) {
+                setSearchFocusItem({ type: 'project', id: modalProject.id });
+            }
+            const areaId = EXPERTISE_AREAS.find(a => a.label === modalProject.areaLabel)?.id;
+            if (areaId) setActiveView(areaId);
+            setModalProject(null);
+            window.scrollTo(0, 0);
+        }
+    };
+
     const renderCellContent = (areaId, fieldId) => {
         const areaData = activeScenario.data[areaId] || {};
         const areaDef = EXPERTISE_AREAS.find(a => a.id === areaId);
@@ -54,11 +90,15 @@ const CompareAreas = ({ activeScenario }) => {
                 return (areaData.projects || []).length > 0 ? (
                     <div className="space-y-3">
                         {areaData.projects.map(p => (
-                            <div key={p.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative overflow-hidden">
+                            <div 
+                                key={p.id} 
+                                onClick={() => handleProjectClick(p, areaDef)}
+                                className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative overflow-hidden cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
+                            >
                                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <div className="flex items-center gap-2 pl-2">
                                     {areaDef?.icon && <areaDef.icon size={14} style={{ color: areaDef?.hex }} />}
-                                    <span className="font-bold text-[14px] text-gray-900">{p.title || 'Senza Titolo'}</span>
+                                    <span className="font-bold text-[14px] text-gray-900 group-hover:text-blue-700 transition-colors">{p.title || 'Senza Titolo'}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide pl-2">
                                     <span>{p.start} &rarr; {p.end}</span>
@@ -114,7 +154,7 @@ const CompareAreas = ({ activeScenario }) => {
                         {areaData.routine.map(t => (
                             <li key={t.id} className="flex items-start gap-2.5 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
-                                <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0 ml-1" />
+                                <Clock size={16} className="text-gray-400 mt-0.5 flex-shrink-0 ml-1" />
                                 <span className="leading-snug">{t.text}</span>
                             </li>
                         ))}
@@ -127,7 +167,70 @@ const CompareAreas = ({ activeScenario }) => {
 
     return (
         <div className="space-y-6 animate-fadeIn pb-20">
-            {/* HEADER CONFIGURATORE - ICONA AGGIORNATA A ArrowRightLeft */}
+            
+            {/* POP-UP DETTAGLIO SINGOLO PROGETTO (Lo stesso della Dashboard) */}
+            {modalProject && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 animate-fadeIn" onClick={() => setModalProject(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all" onClick={e => e.stopPropagation()}>
+                        
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center relative">
+                            <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: modalProject.areaColor }}></div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                            </div>
+                            <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
+                        </div>
+                        
+                        <div className="p-8 overflow-y-auto custom-scrollbar bg-white">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">{modalProject.title || 'Iniziativa senza titolo'}</h2>
+                            
+                            <div className="flex flex-wrap items-center gap-4 mb-8">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <Calendar size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">{modalProject.start} <span className="text-slate-400 font-normal mx-1">→</span> {modalProject.end}</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <TargetIcon size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">Impatto: <span style={{ color: modalProject.areaColor }}>{modalProject.impact}/10</span></span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <Activity size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">Sforzo: {modalProject.effort}/10</span>
+                                </div>
+                            </div>
+
+                            {modalProject.description && (
+                                <div className="mb-8">
+                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Descrizione</h4>
+                                    <div className="text-gray-700 text-sm leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: modalProject.description }} />
+                                </div>
+                            )}
+
+                            {modalProject.enablers && modalProject.enablers.filter(e => e.trim()).length > 0 && (
+                                <div>
+                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Abilitatori Chiave</h4>
+                                    <ul className="space-y-2">
+                                        {modalProject.enablers.filter(e => e.trim()).map((enabler, idx) => (
+                                            <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-700 font-medium">
+                                                <Zap size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                                                <span className="leading-snug">{enabler}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                            <Button variant="secondary" onClick={() => setModalProject(null)}>Chiudi</Button>
+                            <Button onClick={handleGoToEdit}>Modifica Iniziativa</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* HEADER CONFIGURATORE */}
             <div className="bg-white rounded-[24px] border border-gray-200 p-8 shadow-sm">
                 <div className="flex items-center gap-4 mb-8">
                     <div className="p-3 bg-yellow-50 rounded-xl">
@@ -140,7 +243,6 @@ const CompareAreas = ({ activeScenario }) => {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* COLONNA AREE */}
                     <div className="space-y-4">
                         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                             <Columns3 size={14}/> 1. Seleziona le aree (Colonne)
@@ -165,13 +267,12 @@ const CompareAreas = ({ activeScenario }) => {
                         <div className="flex flex-wrap gap-2 pt-2">
                             {EXPERTISE_AREAS.filter(a => !selectedAreas.includes(a.id)).map(a => (
                                 <button key={a.id} draggable onDragStart={(e) => onDragStart(e, a.id, 'area')} onClick={() => toggleArea(a.id)} className="h-9 px-4 rounded-full border border-gray-200 bg-white text-gray-500 text-[12px] font-bold flex items-center gap-2 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: a.hex }}></div> {a.label}
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: a.hex }}></div> {a.label}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* COLONNA VOCI */}
                     <div className="space-y-4">
                         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                             <Rows3 size={14}/> 2. Seleziona le voci (Righe)
