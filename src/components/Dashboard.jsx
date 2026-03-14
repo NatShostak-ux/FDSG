@@ -1,31 +1,32 @@
 import React, { useState } from 'react';
-import { Euro, List, TrendingUp, Calendar, Target, X, ChevronRight, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Euro, List, TrendingUp, Calendar, Target, X, ChevronRight, ChevronDown, ChevronUp, Filter, Activity, Zap } from 'lucide-react';
 import Card from './ui/Card';
+import Button from './ui/Button';
 import GanttChart from './GanttChart';
 import RadarChart from './RadarChart';
 import { ARAD_BLUE, ARAD_GOLD, EXPERTISE_AREAS } from '../utils/constants';
 
-// Importiamo anche STRATEGIC_ROLES per popolare il menu a tendina
 import { STRATEGIC_ROLES, getStrategicRole } from './AreaEditor';
 
 const SHOW_FINANCIALS_AND_LIST = false; 
 
-const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
+const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearchFocusItem }) => {
     const [isProjectPreviewOpen, setIsProjectPreviewOpen] = useState(false);
+    
+    // Stato per la modale del singolo progetto
+    const [modalProject, setModalProject] = useState(null);
     
     // Stati per i Filtri Strategici
     const [filterArea, setFilterArea] = useState('all');
     const [filterTime, setFilterTime] = useState('all');
-    const [filterRole, setFilterRole] = useState('all'); // Nuovo stato per il Ruolo Strategico
-
-    // Stato per KSM Collassabili
+    const [filterRole, setFilterRole] = useState('all'); 
+    
     const [expandedKSMs, setExpandedKSMs] = useState({});
 
     const toggleKsmArea = (areaId) => {
         setExpandedKSMs(prev => ({ ...prev, [areaId]: !prev[areaId] }));
     };
 
-    // === CALCOLI BASE ===
     const calculateTotalBudgetRange = () => {
         let min = 0, max = 0;
         EXPERTISE_AREAS.forEach(area => {
@@ -49,15 +50,11 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
 
     const hasAnyMetrics = EXPERTISE_AREAS.some(area => (activeScenario.data[area.id]?.ksms || []).length > 0);
 
-    // === APPLICAZIONE FILTRI SUL GANTT ===
     let filteredProjects = allProjects;
 
-    // 1. Filtro Area
     if (filterArea !== 'all') {
         filteredProjects = filteredProjects.filter(p => p.areaId === filterArea);
     }
-
-    // 2. Filtro Tempo
     if (filterTime === '2026') {
         filteredProjects = filteredProjects.filter(p => p.start.startsWith('2026') || p.end.startsWith('2026'));
     } else if (filterTime === '2027') {
@@ -66,7 +63,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
         filteredProjects = filteredProjects.filter(p => p.start === '2026-01' || p.start === '2026-02' || p.start === '2026-03' || p.start === '2026-04' || p.start === '2026-05' || p.start === '2026-06');
     }
 
-    // 3. Filtro Ruolo Strategico
     if (filterRole !== 'all') {
         const roleVal = parseInt(filterRole, 10);
         filteredProjects = filteredProjects.filter(p => {
@@ -76,10 +72,102 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
         });
     }
 
+    // Apre il pop-up del dettaglio progetto
+    const openProjectModal = (projectId) => {
+        const project = allProjects.find(p => p.id === projectId);
+        if (project) {
+            setModalProject(project);
+        }
+    };
+
+    // Teletrasporto all'editor per modificare il progetto
+    const handleGoToEdit = () => {
+        if (modalProject && setSearchFocusItem) {
+            setSearchFocusItem({ type: 'project', id: modalProject.id });
+            setActiveView(modalProject.areaId);
+            setModalProject(null); // Chiude la modale
+            window.scrollTo(0, 0);
+        }
+    };
+
     return (
         <div className="space-y-8 animate-fadeIn relative pb-12">
             
-            {/* PREVIEW PROGETTI (Modale) */}
+            {/* POP-UP DETTAGLIO SINGOLO PROGETTO */}
+            {modalProject && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 animate-fadeIn" onClick={() => setModalProject(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header Modale */}
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center relative">
+                            <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: modalProject.areaColor }}></div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                            </div>
+                            <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
+                        </div>
+                        
+                        {/* Corpo Modale */}
+                        <div className="p-8 overflow-y-auto custom-scrollbar bg-white">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">{modalProject.title || 'Iniziativa senza titolo'}</h2>
+                            
+                            {/* Riga Info Chiave */}
+                            <div className="flex flex-wrap items-center gap-4 mb-8">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <Calendar size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">{modalProject.start} <span className="text-slate-400 font-normal mx-1">→</span> {modalProject.end}</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title="Priorità / Impact">
+                                    <Target size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">Impatto: <span style={{ color: modalProject.areaColor }}>{modalProject.impact}/10</span></span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title="Effort">
+                                    <Activity size={14} className="text-slate-400" />
+                                    <span className="text-xs font-bold text-slate-700">Sforzo: {modalProject.effort}/10</span>
+                                </div>
+                                {SHOW_FINANCIALS_AND_LIST && (
+                                    <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                        <Euro size={14} className="text-slate-400" />
+                                        <span className="text-xs font-bold text-slate-700">{(modalProject.budgetMin/1000).toFixed(0)}k - {(modalProject.budgetMax/1000).toFixed(0)}k</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Descrizione (Renderizzata da HTML) */}
+                            {modalProject.description && (
+                                <div className="mb-8">
+                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Descrizione</h4>
+                                    <div className="text-gray-700 text-sm leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: modalProject.description }} />
+                                </div>
+                            )}
+
+                            {/* Abilitatori */}
+                            {modalProject.enablers && modalProject.enablers.filter(e => e.trim()).length > 0 && (
+                                <div>
+                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Abilitatori Chiave</h4>
+                                    <ul className="space-y-2">
+                                        {modalProject.enablers.filter(e => e.trim()).map((enabler, idx) => (
+                                            <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-700 font-medium">
+                                                <Zap size={16} className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                                                <span className="leading-snug">{enabler}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Modale */}
+                        <div className="px-6 py-4 bg-slate-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                            <Button variant="secondary" onClick={() => setModalProject(null)}>Chiudi</Button>
+                            <Button onClick={handleGoToEdit}>Modifica Iniziativa</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PREVIEW LISTA PROGETTI (Modale Esistente) */}
             {isProjectPreviewOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fadeIn" onClick={() => setIsProjectPreviewOpen(false)}>
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -171,7 +259,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
             </Card>
 
             <Card title="Roadmap Strategica Integrata" icon={Calendar} noPadding>
-                {/* FILTRI STRATEGICI */}
                 <div className="p-4 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                     <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
                         <Filter size={16} className="text-blue-600"/> Filtri Strategici
@@ -190,7 +277,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                             <option value="2027">Focus 2027</option>
                         </select>
                         
-                        {/* FILTRO RUOLO STRATEGICO AGGIORNATO */}
                         <select value={filterRole} onChange={e => setFilterRole(e.target.value)} className="bg-white border border-gray-200 text-xs font-bold text-gray-600 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer hover:border-gray-300 transition-colors">
                             <option value="all">Tutti i Ruoli Strategici</option>
                             {STRATEGIC_ROLES.map(role => (
@@ -207,6 +293,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                         showSwimlanes={filterArea === 'all'} 
                         activeAreaId={filterArea !== 'all' ? filterArea : null}
                         onUpdateProject={updateProjectBatch} 
+                        onSelectProject={openProjectModal} // <--- APRE IL POP-UP AL CLICK!
                     />
                     {filteredProjects.length === 0 && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-20">
