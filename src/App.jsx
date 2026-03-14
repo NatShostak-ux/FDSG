@@ -21,11 +21,13 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isEditor, setIsEditor] = useState(false);
   
-  const [appMode, setAppMode] = useState('master'); // 'master' | 'scenario'
+  const [appMode, setAppMode] = useState('master'); 
 
   // Stati per la Ricerca Globale
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  // NUOVO STATO: Salva le coordinate esatte dell'elemento cliccato
+  const [searchFocusItem, setSearchFocusItem] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -59,7 +61,6 @@ function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // NAVIGAZIONE: DA MASTER A SCENARIO
   const handleSelectPhase = (phaseId) => {
     if (scenarios.length < 3) return; 
 
@@ -81,7 +82,7 @@ function App() {
       window.scrollTo(0, 0);
   };
 
-  // === LOGICA RICERCA GLOBALE ===
+  // === MOTORE DI RICERCA POTENZIATO (con Coordinate) ===
   const searchResults = useMemo(() => {
       if (!searchQuery || searchQuery.length < 2) return [];
       const q = searchQuery.toLowerCase();
@@ -93,30 +94,31 @@ function App() {
               const areaLabel = areaDef ? areaDef.label : areaId;
               const pathStr = `${scenario.title || 'Scenario'} > ${areaLabel}`;
 
-              const addResult = (type, text, details = '') => {
-                  results.push({ id: Math.random().toString(), scenarioId: scenario.id, areaId, type, text, details, pathStr, areaColor: areaDef?.hex || '#999' });
+              // Aggiunto itemType e itemId per lo scroll
+              const addResult = (type, text, details = '', itemType, itemId = null) => {
+                  results.push({ id: Math.random().toString(), scenarioId: scenario.id, areaId, type, text, details, pathStr, areaColor: areaDef?.hex || '#999', itemType, itemId });
               };
 
-              if (areaData.objectives?.toLowerCase().includes(q)) addResult('Obiettivo', areaData.objectives.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...');
+              if (areaData.objectives?.toLowerCase().includes(q)) addResult('Obiettivo', areaData.objectives.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...', '', 'objective');
               
               [1, 2, 3].forEach(y => {
-                  if (areaData[`evolution_y${y}`]?.toLowerCase().includes(q)) addResult(`Phasing Anno ${y}`, areaData[`evolution_y${y}`].replace(/<[^>]*>?/gm, '').substring(0, 100) + '...');
+                  if (areaData[`evolution_y${y}`]?.toLowerCase().includes(q)) addResult(`Phasing Anno ${y}`, areaData[`evolution_y${y}`].replace(/<[^>]*>?/gm, '').substring(0, 100) + '...', '', 'phasing', y);
               });
 
               (Array.isArray(areaData.projects) ? areaData.projects : []).forEach(p => {
                   if (p.title?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)) {
-                      addResult('Progetto', p.title || 'Senza Titolo', p.description?.replace(/<[^>]*>?/gm, '').substring(0, 60));
+                      addResult('Progetto', p.title || 'Senza Titolo', p.description?.replace(/<[^>]*>?/gm, '').substring(0, 60), 'project', p.id);
                   }
               });
 
               (Array.isArray(areaData.ksms) ? areaData.ksms : []).forEach(k => {
                   if (k.name?.toLowerCase().includes(q) || k.description?.toLowerCase().includes(q)) {
-                      addResult('Metrica (KSM)', k.name || 'Metrica', k.targetValue ? `Target: ${k.targetValue}` : '');
+                      addResult('Metrica (KSM)', k.name || 'Metrica', k.targetValue ? `Target: ${k.targetValue}` : '', 'ksm', k.id);
                   }
               });
 
               (Array.isArray(areaData.routine) ? areaData.routine : []).forEach(r => {
-                  if (r.text?.toLowerCase().includes(q)) addResult('Task Day-by-Day', r.text);
+                  if (r.text?.toLowerCase().includes(q)) addResult('Task Day-by-Day', r.text, '', 'routine', r.id);
               });
           });
       });
@@ -126,9 +128,9 @@ function App() {
   const handleResultClick = (res) => {
       setActiveScenarioId(res.scenarioId);
       setActiveView(res.areaId);
+      setSearchFocusItem({ type: res.itemType, id: res.itemId }); // Passa il focus
       setSearchQuery('');
       setIsSearchFocused(false);
-      window.scrollTo(0, 0);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
@@ -204,7 +206,6 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12" style={{ fontFamily: 'Outfit, sans-serif' }}>
       
-      {/* HEADER DINAMICO */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -237,24 +238,20 @@ function App() {
 
       <main className="max-w-[1400px] mx-auto px-4 py-8 bg-slate-50">
         
-        {/* LIVELLO 0: MASTER ROADMAP */}
         <div className={appMode === 'master' ? 'block' : 'hidden'}>
             <MasterRoadmapView onSelectPhase={handleSelectPhase} />
         </div>
 
-        {/* LIVELLO 1: DETTAGLIO SCENARIO */}
         {appMode === 'scenario' && (
             <div className="animate-fadeIn">
                 <div className="mb-8">
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
                         
-                        {/* SWITCHER SCENARI E RICERCA GLOBALE */}
                         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 border-b border-gray-100 pb-4 relative z-50">
                             
                             <div className="flex items-center gap-6 flex-grow">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block whitespace-nowrap">Scenario in visione</span>
                                 
-                                {/* BARRA DI RICERCA GLOBALE */}
                                 <div className="relative flex-grow max-w-md hidden md:block">
                                     <div className={`flex items-center bg-slate-50 rounded-lg transition-all border ${isSearchFocused ? 'ring-2 ring-blue-100 border-blue-300 bg-white' : 'border-gray-200'}`}>
                                         <Search size={16} className="text-gray-400 ml-3 flex-shrink-0" />
@@ -272,7 +269,6 @@ function App() {
                                         )}
                                     </div>
 
-                                    {/* DROPDOWN RISULTATI RICERCA */}
                                     {isSearchFocused && searchQuery.length >= 2 && (
                                         <div className="absolute top-[calc(100%+8px)] left-0 w-full md:w-[500px] bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden max-h-[60vh] overflow-y-auto z-[100]">
                                             {searchResults.length === 0 ? (
@@ -283,13 +279,13 @@ function App() {
                                                         {searchResults.length} Risultati trovati
                                                     </div>
                                                     {searchResults.map((res, idx) => (
-                                                        <div key={idx} onClick={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors group">
+                                                        <div key={idx} onMouseDown={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-blue-50/50 cursor-pointer transition-colors group">
                                                             <div className="flex items-center gap-2 mb-1.5">
                                                                 <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
                                                                 <span className="text-[10px] font-bold text-gray-400 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
                                                             </div>
-                                                            <div className="font-bold text-sm text-gray-900 group-hover:text-blue-700 transition-colors">{res.text}</div>
-                                                            {res.details && <div className="text-xs text-gray-500 mt-1 truncate">{res.details}</div>}
+                                                            <div className="font-medium text-sm text-gray-800 group-hover:text-blue-700 transition-colors">{res.text}</div>
+                                                            {res.details && <div className="text-xs font-medium text-gray-500 mt-1 truncate">{res.details}</div>}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -339,7 +335,8 @@ function App() {
                             <AreaEditor
                                 activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
                                 updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
-                                updateKSM={updateKSM} isEditor={isEditor}
+                                updateKSM={updateKSM} isEditor={isEditor} 
+                                searchFocusItem={searchFocusItem} // PASSIAMO IL FOCUS
                             />
                         )}
                     </div>
