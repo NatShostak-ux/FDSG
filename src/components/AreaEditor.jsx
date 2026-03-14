@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
@@ -34,6 +34,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [newRoutineTask, setNewRoutineTask] = useState("");
+    
+    // Nuovo stato per le KSM collassabili
+    const [expandedKSMs, setExpandedKSMs] = useState({});
 
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
     if (!area) return null;
@@ -52,14 +55,16 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
     }, [activeView]);
 
-    // === GESTIONE FOCUS RICERCA (SCROLL + HIGHLIGHT) ===
+    // === GESTIONE FOCUS RICERCA (SCROLL + HIGHLIGHT + AUTO-EXPAND) ===
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') {
                 setSelectedProjectId(searchFocusItem.id);
             }
+            if (searchFocusItem.type === 'ksm') {
+                setExpandedKSMs(prev => ({ ...prev, [searchFocusItem.id]: true }));
+            }
             
-            // Timeout leggero per dare tempo a React di renderizzare i pannelli aperti
             setTimeout(() => {
                 let targetId = '';
                 if (searchFocusItem.type === 'objective') targetId = 'target-objective';
@@ -72,15 +77,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     
-                    // Effetto highlight luminoso
                     el.style.transition = 'all 0.4s ease-out';
                     el.style.boxShadow = '0 0 0 6px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2)';
-                    el.style.backgroundColor = '#f0f9ff'; // Azzurro molto chiaro
+                    el.style.backgroundColor = '#f0f9ff';
                     
                     setTimeout(() => {
                         el.style.boxShadow = 'none';
-                        el.style.backgroundColor = 'transparent'; // Torna normale
-                    }, 2500); // L'highlight svanisce dopo 2.5 secondi
+                        el.style.backgroundColor = 'transparent';
+                    }, 2500);
                 }
             }, 150);
         }
@@ -117,9 +121,16 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     };
 
+    // Logica per gestire i KSM espandibili
+    const toggleKsm = (ksmId) => {
+        setExpandedKSMs(prev => ({ ...prev, [ksmId]: !prev[ksmId] }));
+    };
+
     const addKSM = () => {
         if (!isEditor) return;
-        updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: generateUniqueId('ksm'), name: '', valueAsIs: '', targetValue: '', description: '' }]);
+        const newId = generateUniqueId('ksm');
+        updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+        setExpandedKSMs(prev => ({ ...prev, [newId]: true })); // Auto-espande il nuovo KSM
     };
 
     const removeKSM = (ksmId) => {
@@ -306,27 +317,68 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             </Card>
 
             <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
-                <div className="p-6 space-y-6 bg-slate-50/50">
+                <div className="p-6 space-y-4 bg-slate-50/50">
                     {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
-                        <div className="text-gray-400 italic text-sm">Nessuna metrica definita.</div>
+                        <div className="text-gray-400 italic text-sm text-center py-4">Nessuna metrica definita.</div>
                     ) : (
-                        data.ksms.map((ksm) => (
-                            <div key={ksm.id} id={`target-ksm-${ksm.id}`} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative group space-y-6">
-                                {isEditor && <button onClick={() => removeKSM(ksm.id)} className="absolute top-6 right-6 text-gray-300 hover:text-red-600"><Trash2 size={18} /></button>}
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Denominazione Metrica</label>
-                                    <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0" placeholder="Nome Metrica" />
+                        data.ksms.map((ksm) => {
+                            const isExpanded = expandedKSMs[ksm.id];
+                            
+                            return (
+                                <div key={ksm.id} id={`target-ksm-${ksm.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative group transition-all hover:border-gray-300">
+                                    
+                                    {/* HEADER COLLASSABILE */}
+                                    <div className="flex items-center justify-between p-5 bg-white relative z-10">
+                                        <div className="flex-grow pr-6">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Denominazione Metrica</label>
+                                            <input 
+                                                type="text" 
+                                                value={ksm.name || ''} 
+                                                onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} 
+                                                disabled={!isEditor} 
+                                                className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0 focus:ring-0 placeholder-gray-300" 
+                                                placeholder="Nome Metrica (es. Conversion Rate...)" 
+                                            />
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {isEditor && (
+                                                <button onClick={() => removeKSM(ksm.id)} className="text-gray-300 hover:text-red-500 transition-colors p-2">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={() => toggleKsm(ksm.id)} 
+                                                className="bg-slate-50 hover:bg-slate-100 border border-gray-200 text-gray-500 p-2 rounded-lg transition-colors flex items-center justify-center"
+                                                title={isExpanded ? "Comprimi" : "Espandi"}
+                                            >
+                                                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* CORPO ESPANDIBILE */}
+                                    {isExpanded && (
+                                        <div className="p-5 pt-0 bg-slate-50/50 border-t border-gray-100 animate-fadeIn">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 rounded-xl border border-gray-100 shadow-sm mt-4 mb-6">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label>
+                                                    <input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base font-medium p-0 focus:ring-0 placeholder-gray-300" placeholder="Es. €383.741" />
+                                                </div>
+                                                <div className="md:border-l border-gray-100 md:pl-6">
+                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label>
+                                                    <input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base text-blue-600 font-bold p-0 focus:ring-0 placeholder-blue-200" placeholder="Es. €1.100.000 Anno 3" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
+                                                <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label><input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-sm p-0" placeholder="Es. 1.2%" /></div>
-                                    <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label><input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-sm p-0 text-blue-600 font-bold" placeholder="Es. > 2.5%" /></div>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
-                                    <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} />
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </Card>
