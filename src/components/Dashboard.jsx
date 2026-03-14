@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Euro, List, TrendingUp, Calendar, Target, X, ChevronRight, ChevronDown, ChevronUp, Filter, Activity, Zap } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -22,6 +22,21 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
     const [filterRole, setFilterRole] = useState('all'); 
     
     const [expandedKSMs, setExpandedKSMs] = useState({});
+
+    // === BLOCCO DELLO SCROLL (Nuova Funzione) ===
+    // Quando una modale è aperta, impediamo alla pagina sotto di scorrere
+    useEffect(() => {
+        if (modalProject || isProjectPreviewOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        
+        // Pulizia: se il componente viene distrutto, sblocchiamo comunque lo scroll
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [modalProject, isProjectPreviewOpen]);
 
     const toggleKsmArea = (areaId) => {
         setExpandedKSMs(prev => ({ ...prev, [areaId]: !prev[areaId] }));
@@ -72,7 +87,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
         });
     }
 
-    // Apre il pop-up del dettaglio progetto
     const openProjectModal = (projectId) => {
         const project = allProjects.find(p => p.id === projectId);
         if (project) {
@@ -80,13 +94,17 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
         }
     };
 
-    // Teletrasporto all'editor per modificare il progetto
+    // === TASTO "MODIFICA INIZIATIVA" CORRETTO ===
     const handleGoToEdit = () => {
-        if (modalProject && setSearchFocusItem) {
-            setSearchFocusItem({ type: 'project', id: modalProject.id });
+        if (modalProject) {
+            // Se la funzione di focus esiste, prepara l'illuminazione del progetto
+            if (setSearchFocusItem) {
+                setSearchFocusItem({ type: 'project', id: modalProject.id });
+            }
+            // Cambia vista sull'area corrispondente
             setActiveView(modalProject.areaId);
             setModalProject(null); // Chiude la modale
-            window.scrollTo(0, 0);
+            window.scrollTo(0, 0); // Riporta la vista in alto
         }
     };
 
@@ -293,7 +311,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                         showSwimlanes={filterArea === 'all'} 
                         activeAreaId={filterArea !== 'all' ? filterArea : null}
                         onUpdateProject={updateProjectBatch} 
-                        onSelectProject={openProjectModal} // <--- APRE IL POP-UP AL CLICK!
+                        onSelectProject={openProjectModal} 
                     />
                     {filteredProjects.length === 0 && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-20">
