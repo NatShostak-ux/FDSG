@@ -202,6 +202,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch }) => {
                         projects={filteredProjects} 
                         areas={EXPERTISE_AREAS} 
                         showSwimlanes={filterArea === 'all'} 
+                        activeAreaId={filterArea !== 'all' ? filterArea : null} // <--- LA MODIFICA È QUI!
                         onUpdateProject={updateProjectBatch} 
                     />
                     {filteredProjects.length === 0 && (
