@@ -70,11 +70,28 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
     delays.forEach((d, i) => setTimeout(() => setStep(4 + i), d));
   };
 
+  // Nuova funzione SKIP
+  const skipToEnd = () => {
+    setShowRoadmap(true);
+    setShowFuture(true);
+    setStep(8); // Rivela tutto immediatamente
+  };
+
   const s = (n) => step >= n;
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-4 animate-fadeIn pb-24">
+    <div className="max-w-6xl mx-auto py-8 px-4 animate-fadeIn pb-24 relative">
       
+      {/* TASTO SKIP */}
+      {step < 8 && (
+        <button 
+            onClick={skipToEnd}
+            className="absolute top-4 right-4 md:top-8 md:right-8 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors flex items-center gap-1 z-50 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-md"
+        >
+            Skip <ChevronRight size={14} />
+        </button>
+      )}
+
       {/* SEZIONE 1: I 3 PRINCIPI CHIAVE */}
       <div className="mb-24 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-100/40 to-transparent rounded-[3rem] -z-10 transform scale-105 pointer-events-none"></div>
@@ -319,7 +336,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                     ))}
                                 </div>
 
-                                {/* ABILITATORI TRASVERSALI (Nuova UI per Angolo Retto - SENZA hack bianchi) */}
+                                {/* ABILITATORI TRASVERSALI */}
                                 <div className="relative flex items-start pl-8 mt-8 pb-2 z-10">
                                     {/* Segmento verticale che collega il blocco sopra all'angolo */}
                                     <div className="absolute left-0 -top-8 h-[42px] w-px bg-gray-300 z-0"></div>
