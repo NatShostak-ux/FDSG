@@ -70,27 +70,18 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
     delays.forEach((d, i) => setTimeout(() => setStep(4 + i), d));
   };
 
-  // Nuova funzione SKIP
-  const skipToEnd = () => {
-    setShowRoadmap(true);
-    setShowFuture(true);
-    setStep(8); // Rivela tutto immediatamente
-  };
-
   const s = (n) => step >= n;
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 animate-fadeIn pb-24 relative">
       
-      {/* TASTO SKIP */}
-      {step < 8 && (
-        <button 
-            onClick={skipToEnd}
-            className="absolute top-4 right-4 md:top-8 md:right-8 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors flex items-center gap-1 z-50 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-md"
-        >
-            Skip <ChevronRight size={14} />
-        </button>
-      )}
+      {/* TASTO SKIP PIÙ EVIDENTE (Porta direttamente alla Dashboard del primo Scenario) */}
+      <button 
+          onClick={() => onSelectPhase(1)}
+          className="absolute top-2 right-2 md:top-6 md:right-6 bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 text-gray-900 text-[11px] font-bold tracking-widest uppercase px-6 py-3 rounded-full transition-all flex items-center gap-2 z-50 group"
+      >
+          Skip agli Scenari <ChevronRight size={16} className="text-blue-600 group-hover:translate-x-1 transition-transform" />
+      </button>
 
       {/* SEZIONE 1: I 3 PRINCIPI CHIAVE */}
       <div className="mb-24 relative">
@@ -336,7 +327,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                     ))}
                                 </div>
 
-                                {/* ABILITATORI TRASVERSALI */}
+                                {/* ABILITATORI TRASVERSALI (Nuova UI per Angolo Retto) */}
                                 <div className="relative flex items-start pl-8 mt-8 pb-2 z-10">
                                     {/* Segmento verticale che collega il blocco sopra all'angolo */}
                                     <div className="absolute left-0 -top-8 h-[42px] w-px bg-gray-300 z-0"></div>
