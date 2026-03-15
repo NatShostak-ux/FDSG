@@ -24,7 +24,7 @@ function App() {
   
   const [appMode, setAppMode] = useState('master'); 
 
-  // Stati per la Ricerca Globale
+  // Stati per la Ricerca Globale e Deep Linking
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchFocusItem, setSearchFocusItem] = useState(null);
@@ -137,7 +137,7 @@ function App() {
       setSearchFocusItem({ type: res.itemType, id: res.itemId });
       setSearchQuery('');
       setIsSearchFocused(false);
-      window.scrollTo(0, 0);
+      // Non facciamo window.scrollTo(0,0) qui perché vogliamo che l'AreaEditor faccia lo scroll all'elemento
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-sans">Caricamento in corso...</div>;
@@ -289,7 +289,7 @@ function App() {
                                                         <div key={idx} onMouseDown={() => handleResultClick(res)} className="p-4 border-b border-gray-50 hover:bg-slate-50 cursor-pointer transition-colors group">
                                                             <div className="flex items-center gap-2 mb-1.5">
                                                                 <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded shadow-sm" style={{ backgroundColor: res.areaColor }}>{res.type}</span>
-                                                                <span className="text-[10px] font-bold text-gray-400 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
+                                                                <span className="text-[10px] font-bold text-gray-500 tracking-wider flex items-center gap-1">{res.pathStr} <ChevronRight size={12}/></span>
                                                             </div>
                                                             <div className="font-medium text-sm text-slate-800 group-hover:text-blue-900 transition-colors">{res.text}</div>
                                                             {res.details && <div className="text-xs font-medium text-slate-500 mt-1 truncate">{res.details}</div>}
@@ -308,7 +308,10 @@ function App() {
                                     return (
                                         <button
                                             key={s.id}
-                                            onClick={() => setActiveScenarioId(s.id)}
+                                            onClick={() => {
+                                                setActiveScenarioId(s.id);
+                                                setSearchFocusItem(null); // RESET FOCUS AL CAMBIO SCENARIO
+                                            }}
                                             className={`px-4 py-2 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all whitespace-nowrap flex-shrink-0 ${
                                                 isActive 
                                                 ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
@@ -329,10 +332,18 @@ function App() {
                 </div>
 
                 <div className="flex gap-6 items-start relative">
-                    <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeScenario={activeScenario} />
+                    <Sidebar 
+                        activeView={activeView} 
+                        setActiveView={(view) => {
+                            setActiveView(view);
+                            setSearchFocusItem(null); // RESET FOCUS QUANDO SI NAVIGA DALLA SIDEBAR
+                        }} 
+                        isSidebarOpen={isSidebarOpen} 
+                        setIsSidebarOpen={setIsSidebarOpen} 
+                        activeScenario={activeScenario} 
+                    />
                     
                     <div className="flex-grow min-w-0 transition-all duration-300">
-                        {/* GESTIONE ROUTING VISTE (Dashboard, Compare, AreaEditor) */}
                         {activeView === 'dashboard' ? (
                             <Dashboard 
                                 activeScenario={activeScenario} 
@@ -348,10 +359,15 @@ function App() {
                             />
                         ) : (
                             <AreaEditor
-                                activeView={activeView} activeScenario={activeScenario} updateAreaData={updateAreaData}
-                                updateProject={handleUpdateProject} updateProjectBatch={handleBatchUpdateProject}
-                                updateKSM={updateKSM} isEditor={isEditor} 
+                                activeView={activeView} 
+                                activeScenario={activeScenario} 
+                                updateAreaData={updateAreaData}
+                                updateProject={handleUpdateProject} 
+                                updateProjectBatch={handleBatchUpdateProject}
+                                updateKSM={updateKSM} 
+                                isEditor={isEditor} 
                                 searchFocusItem={searchFocusItem}
+                                onFocusHandled={() => setSearchFocusItem(null)} // NUOVA CALLBACK PER RESETTARE IL FOCUS
                             />
                         )}
                     </div>
