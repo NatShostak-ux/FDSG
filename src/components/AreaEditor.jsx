@@ -29,13 +29,11 @@ const generateUniqueId = (prefix) => {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null }) => {
+const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null, onFocusHandled }) => {
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [newRoutineTask, setNewRoutineTask] = useState("");
-    
-    // Nuovo stato per le KSM collassabili
     const [expandedKSMs, setExpandedKSMs] = useState({});
 
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
@@ -44,18 +42,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
     const rawProjects = Array.isArray(data.projects) ? data.projects : [];
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area.id }));
-
-    const areaBudgetMin = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMin) || 0), 0);
-    const areaBudgetMax = areaProjects.reduce((acc, p) => acc + (Number(p.budgetMax) || 0), 0);
     const routineTasks = Array.isArray(data.routine) ? data.routine : [];
-
     const currentRole = getStrategicRole(data.importance);
 
     useEffect(() => {
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
     }, [activeView]);
 
-    // === GESTIONE FOCUS RICERCA (SCROLL + HIGHLIGHT + AUTO-EXPAND) ===
+    // === GESTIONE FOCUS RICERCA (SOLO SE ESISTE UN FOCUS ATTIVO) ===
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') {
@@ -76,7 +70,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 const el = document.getElementById(targetId);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
                     el.style.transition = 'all 0.4s ease-out';
                     el.style.boxShadow = '0 0 0 6px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2)';
                     el.style.backgroundColor = '#f0f9ff';
@@ -84,9 +77,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     setTimeout(() => {
                         el.style.boxShadow = 'none';
                         el.style.backgroundColor = 'transparent';
-                    }, 2500);
+                        // IMPORTANTE: Segnala all'App che abbiamo gestito il focus
+                        if (onFocusHandled) onFocusHandled();
+                    }, 2000);
                 }
             }, 150);
+        } else {
+            // Se non c'è focus (navigazione normale dalla sidebar), forza lo scroll in alto
+            window.scrollTo(0, 0);
         }
     }, [searchFocusItem, activeView]);
 
@@ -121,7 +119,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     };
 
-    // Logica per gestire i KSM espandibili
     const toggleKsm = (ksmId) => {
         setExpandedKSMs(prev => ({ ...prev, [ksmId]: !prev[ksmId] }));
     };
@@ -130,7 +127,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!isEditor) return;
         const newId = generateUniqueId('ksm');
         updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
-        setExpandedKSMs(prev => ({ ...prev, [newId]: true })); // Auto-espande il nuovo KSM
+        setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
     };
 
     const removeKSM = (ksmId) => {
@@ -222,12 +219,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </div>
                             )}
                         </div>
-                        {SHOW_BUDGET && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col justify-center min-w-[180px]">
-                                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Budget Totale Area</span>
-                                <div className="font-bold text-lg text-gray-800">€ {areaBudgetMin.toLocaleString('it-IT')} - {areaBudgetMax.toLocaleString('it-IT')}</div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -243,7 +234,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     {[1, 2, 3].map(year => (
                         <div key={year} id={`target-phasing-${year}`} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
                             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Anno {year}</div>
-                            <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden [&>div]:flex-grow [&>div]:flex [&>div]:flex-col">
+                            <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
                                 <AdvancedEditor key={`evo-${activeView}-${year}`} value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
                             </div>
                         </div>
@@ -273,14 +264,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32 text-right" />
                                         </div>
                                     </div>
-                                    
-                                    {SHOW_BUDGET && (
-                                        <div className="space-y-2 w-64">
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Budget (€)</label>
-                                            <div className="flex items-center gap-2 h-11"><input type="number" placeholder="Min" value={selectedProject.budgetMin ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMin', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /><span className="text-gray-300">-</span><input type="number" placeholder="Max" value={selectedProject.budgetMax ?? ''} onChange={(e) => updateProject(activeView, selectedProject.id, 'budgetMax', parseFloat(e.target.value) || 0)} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-sm font-bold p-2.5 h-full" /></div>
-                                        </div>
-                                    )}
-
                                     <div className="flex gap-4">
                                         <div className="space-y-2 w-20 text-center">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priorità</label>
@@ -323,57 +306,25 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     ) : (
                         data.ksms.map((ksm) => {
                             const isExpanded = expandedKSMs[ksm.id];
-                            
                             return (
                                 <div key={ksm.id} id={`target-ksm-${ksm.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative group transition-all hover:border-gray-300">
-                                    
-                                    {/* HEADER COLLASSABILE */}
                                     <div className="flex items-center justify-between p-5 bg-white relative z-10">
                                         <div className="flex-grow pr-6">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Denominazione Metrica</label>
-                                            <input 
-                                                type="text" 
-                                                value={ksm.name || ''} 
-                                                onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} 
-                                                disabled={!isEditor} 
-                                                className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0 focus:ring-0 placeholder-gray-300" 
-                                                placeholder="Nome Metrica (es. Conversion Rate...)" 
-                                            />
+                                            <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0 focus:ring-0 placeholder-gray-300" placeholder="Nome Metrica" />
                                         </div>
-                                        
                                         <div className="flex items-center gap-3 shrink-0">
-                                            {isEditor && (
-                                                <button onClick={() => removeKSM(ksm.id)} className="text-gray-300 hover:text-red-500 transition-colors p-2">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            )}
-                                            <button 
-                                                onClick={() => toggleKsm(ksm.id)} 
-                                                className="bg-slate-50 hover:bg-slate-100 border border-gray-200 text-gray-500 p-2 rounded-lg transition-colors flex items-center justify-center"
-                                                title={isExpanded ? "Comprimi" : "Espandi"}
-                                            >
-                                                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                            </button>
+                                            {isEditor && <button onClick={() => removeKSM(ksm.id)} className="text-gray-300 hover:text-red-500 transition-colors p-2"><Trash2 size={18} /></button>}
+                                            <button onClick={() => toggleKsm(ksm.id)} className="bg-slate-50 hover:bg-slate-100 border border-gray-200 text-gray-500 p-2 rounded-lg transition-colors flex items-center justify-center">{isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</button>
                                         </div>
                                     </div>
-
-                                    {/* CORPO ESPANDIBILE */}
                                     {isExpanded && (
                                         <div className="p-5 pt-0 bg-slate-50/50 border-t border-gray-100 animate-fadeIn">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 rounded-xl border border-gray-100 shadow-sm mt-4 mb-6">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label>
-                                                    <input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base font-medium p-0 focus:ring-0 placeholder-gray-300" placeholder="Es. €383.741" />
-                                                </div>
-                                                <div className="md:border-l border-gray-100 md:pl-6">
-                                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label>
-                                                    <input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base text-blue-600 font-bold p-0 focus:ring-0 placeholder-blue-200" placeholder="Es. €1.100.000 Anno 3" />
-                                                </div>
+                                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label><input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base font-medium p-0 focus:ring-0 placeholder-gray-300" placeholder="Es. €383.741" /></div>
+                                                <div className="md:border-l border-gray-100 md:pl-6"><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label><input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base text-blue-600 font-bold p-0 focus:ring-0 placeholder-blue-200" placeholder="Es. €1.100.000" /></div>
                                             </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione (Cosa Misura)</label>
-                                                <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} />
-                                            </div>
+                                            <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione</label><AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} /></div>
                                         </div>
                                     )}
                                 </div>
@@ -387,7 +338,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="space-y-4">
                     {isEditor && (
                         <div className="flex items-center gap-3">
-                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime necessarie per raggiungere gli obiettivi fissati." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
                             <Button variant="secondary" onClick={handleAddRoutineTask}>+ Aggiungi</Button>
                         </div>
                     )}
@@ -396,33 +347,13 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     ) : (
                         <div className="space-y-2 mt-4">
                             {routineTasks.map((task) => (
-                                <div key={task.id} id={`target-routine-${task.id}`} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl rounded-lg">
+                                <div key={task.id} id={`target-routine-${task.id}`} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
                                     <div className="flex items-start gap-3 flex-grow">
-                                        <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>
-                                            {task.completed && <Check size={12} strokeWidth={3} />}
-                                        </button>
-                                        
+                                        <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>{task.completed && <Check size={12} strokeWidth={3} />}</button>
                                         {isEditor ? (
-                                            <textarea
-                                                value={task.text}
-                                                onChange={(e) => {
-                                                    e.target.style.height = 'auto';
-                                                    e.target.style.height = e.target.scrollHeight + 'px';
-                                                    updateRoutineTaskText(task.id, e.target.value);
-                                                }}
-                                                ref={el => {
-                                                    if(el) {
-                                                        el.style.height = 'auto';
-                                                        el.style.height = el.scrollHeight + 'px';
-                                                    }
-                                                }}
-                                                rows={1}
-                                                className={`flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm outline-none transition-colors resize-none overflow-hidden leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}
-                                            />
+                                            <textarea value={task.text} onChange={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; updateRoutineTaskText(task.id, e.target.value); }} ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} rows={1} className={`flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm outline-none transition-colors resize-none overflow-hidden leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`} />
                                         ) : (
-                                            <span className={`text-sm select-none leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
-                                                {task.text}
-                                            </span>
+                                            <span className={`text-sm select-none leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{task.text}</span>
                                         )}
                                     </div>
                                     {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 p-1 flex-shrink-0 mt-0.5"><X size={16} /></button>}
