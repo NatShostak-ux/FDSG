@@ -76,7 +76,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const [expandedKSMs, setExpandedKSMs] = useState({});
     const [blockMenuOpen, setBlockMenuOpen] = useState(false);
     
-    // REF per il menu dei blocchi (chiusura cliccando fuori)
+    // REF per il menu dei blocchi
     const blockMenuRef = useRef(null);
     const blockButtonRef = useRef(null);
 
@@ -127,7 +127,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [blockMenuOpen]);
 
-    // --- FOCUS GESTION (AGGIORNATO E INTELLIGENTE) ---
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') setSelectedProjectId(searchFocusItem.id);
@@ -136,11 +135,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             setTimeout(() => {
                 let targetId = '';
                 
-                // NUOVA LOGICA INTELLIGENTE: Trova dinamicamente in quale blocco si trova l'elemento
                 if (searchFocusItem.type === 'project') {
                     const block = blocks.find(b => b.type === 'gantt' && (data[b.id.startsWith('std_') ? 'projects' : `${b.id}_projects`] || []).some(p => p.id === searchFocusItem.id));
                     if (block) targetId = `block-wrapper-${block.id}`;
-                    else targetId = 'target-project-details'; // Fallback per vecchi salvataggi
+                    else targetId = 'target-project-details';
                 } else if (searchFocusItem.type === 'ksm') {
                     const block = blocks.find(b => b.type === 'ksms' && (data[b.id.startsWith('std_') ? 'ksms' : `${b.id}_ksms`] || []).some(k => k.id === searchFocusItem.id));
                     if (block) targetId = `block-wrapper-${block.id}`;
@@ -264,11 +262,22 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {[1, 2, 3].map(y => {
                         const phaseKey = isLegacy ? `evolution_y${y}` : `${block.id}_y${y}`;
+                        // NUOVA CHIAVE PER I TITOLI DEI BOX PHASING
+                        const phaseTitleKey = isLegacy ? `evolution_y${y}_title` : `${block.id}_y${y}_title`;
+                        const displayTitle = data[phaseTitleKey] !== undefined ? data[phaseTitleKey] : `Anno ${y}`;
+
                         return (
                             <div key={y} id={isLegacy ? `target-phasing-${y}` : undefined} className="bg-slate-50 border border-gray-100 p-4 rounded-xl h-full flex flex-col transition-all hover:bg-white hover:shadow-sm">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Anno {y}</div>
+                                <input 
+                                    type="text"
+                                    value={displayTitle}
+                                    onChange={(e) => updateAreaData(activeView, phaseTitleKey, e.target.value)}
+                                    disabled={!isEditor}
+                                    className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 bg-transparent border-0 p-0 focus:ring-0 outline-none w-full hover:text-gray-700 transition-colors"
+                                    placeholder={`Titolo Fase ${y}...`}
+                                />
                                 <div className="bg-white border border-gray-200 rounded-lg flex-grow overflow-hidden">
-                                    <AdvancedEditor key={`phasing-${y}-${block.id}-${activeView}`} value={data[phaseKey] || ''} onChange={(v) => updateAreaData(activeView, phaseKey, v)} disabled={!isEditor} placeholder={`Focus Anno ${y}...`} />
+                                    <AdvancedEditor key={`phasing-${y}-${block.id}-${activeView}`} value={data[phaseKey] || ''} onChange={(v) => updateAreaData(activeView, phaseKey, v)} disabled={!isEditor} placeholder={`Focus Fase ${y}...`} />
                                 </div>
                             </div>
                         );
@@ -690,7 +699,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             const onAddChild = (parentId) => handleOrgUpdate(addOrgChild(orgData, parentId));
             const onRemoveNode = (id) => handleOrgUpdate(removeOrgNode(orgData, id));
 
-            // Logica Livelli Infiniti + Stile migliorato
             const renderOrgNode = (node, parentId = null, depth = 0) => {
                 let bgClass = "bg-white border border-gray-200";
                 let textClass = "text-gray-700";
