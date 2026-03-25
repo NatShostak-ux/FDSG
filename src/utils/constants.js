@@ -21,7 +21,7 @@ export const EXPERTISE_AREAS = [
     { id: 'loyalty', label: 'Loyalty & Membership', icon: Users, hex: '#db2777' },
     { id: 'crm', label: 'CRM & Data', icon: Database, hex: '#0891b2' },
     { id: 'social', label: 'Social Media & Content', icon: Share2, hex: '#dc2626' },
-    { id: 'seo', label: 'SEO & SEM', icon: Search, hex: '#16a34a' },
+    { id: 'seo', label: 'SEO & Digital Marketing', icon: Search, hex: '#16a34a' },
     { id: 'tech', label: 'Tech & Infrastructure', icon: Layers, hex: '#475569' },
     { id: 'organization', label: 'Organizzazione & Cultura', icon: Activity, hex: '#4f46e5' },
     { id: 'logistics', label: 'Logistica', icon: Truck, hex: '#0d9488' },
