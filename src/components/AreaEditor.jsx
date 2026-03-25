@@ -58,7 +58,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
     const currentRole = getStrategicRole(data.importance);
 
-    // Autoseleziona il primo progetto disponibile nel primo blocco Gantt utile
+    // Autoseleziona il primo progetto
     useEffect(() => {
         if (!selectedProjectId) {
             for (let b of blocks) {
@@ -143,7 +143,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             title: ''
         };
 
-        // Assegna il titolo di default (editabile in seguito)
         switch (type) {
             case 'objectives': newBlock.title = 'Nuovi Obiettivi Macro'; break;
             case 'phasing': newBlock.title = 'Nuovo Phasing Qualitativo'; break;
@@ -158,7 +157,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'blocks', [...blocks, newBlock]);
         setBlockMenuOpen(false);
 
-        // Scroll infallibile sul nuovo blocco
         setTimeout(() => {
             const newElement = document.getElementById(`block-wrapper-${newBlock.id}`);
             if (newElement) {
@@ -305,7 +303,15 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                     <input type="text" value={en} className={`enabler-input-${blockSelectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700 w-full`} onChange={(e) => {
                                                         const next = [...(blockSelectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                    }} onKeyDown={(e) => handleEnablerKeyDown(e, i, blockSelectedProject.id, blockSelectedProject.enablers || [""], handleUpdateProject)} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
+                                                    }} onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            const next = [...(blockSelectedProject.enablers || [""])];
+                                                            next.splice(i + 1, 0, "");
+                                                            handleUpdateProject(blockSelectedProject.id, 'enablers', next);
+                                                            setTimeout(() => document.querySelectorAll(`.enabler-input-${blockSelectedProject.id}`)[i + 1]?.focus(), 10);
+                                                        }
+                                                    }} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
                                                     {isEditor && <button onClick={() => {
                                                         const next = blockSelectedProject.enablers.filter((_, idx) => idx !== i);
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next.length ? next : [""]);
@@ -455,10 +461,51 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 handleTableUpdate({ ...tableData, rows: [...tableData.rows, newRow] });
             };
 
+            // LOGICA INTEGRAZIONE EXCEL PASTE
+            const handlePaste = (e, startRow, startCol) => {
+                const pasteData = e.clipboardData.getData('text');
+                if (!pasteData) return;
+
+                // Se è solo un testo semplice senza a capo o tab, lasciamo fare il paste nativo
+                if (!pasteData.includes('\n') && !pasteData.includes('\t')) {
+                    return; 
+                }
+
+                e.preventDefault(); // Blocca il paste nativo della textarea
+
+                // Dividiamo per righe (Excel usa \r\n o \n) e rimuoviamo l'ultima riga vuota se presente
+                const rowsToPaste = pasteData.replace(/\r?\n$/, '').split(/\r\n|\n/);
+                
+                let updatedRows = tableData.rows.map(r => ({ ...r, cells: [...r.cells] })); // Copia profonda
+
+                rowsToPaste.forEach((rowString, i) => {
+                    const targetRowIndex = startRow + i;
+                    
+                    // Se la riga di destinazione non esiste, la creiamo! Espansione automatica.
+                    if (targetRowIndex >= updatedRows.length) {
+                        updatedRows.push({
+                            id: generateUniqueId('row_auto'),
+                            cells: Array(tableData.headers.length).fill('')
+                        });
+                    }
+
+                    // Excel separa le colonne con un Tab (\t)
+                    const cellsToPaste = rowString.split('\t');
+                    cellsToPaste.forEach((cellText, j) => {
+                        const targetColIndex = startCol + j;
+                        // Incolliamo solo se la colonna esiste nella nostra tabella
+                        if (targetColIndex < tableData.headers.length) {
+                            updatedRows[targetRowIndex].cells[targetColIndex] = cellText;
+                        }
+                    });
+                });
+
+                handleTableUpdate({ ...tableData, rows: updatedRows });
+            };
+
             blockContent = (
                 <div className="space-y-4 p-6">
                     <div className="w-full overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm custom-scrollbar pb-2">
-                        {/* Tabella con layout fisso e scroll orizzontale automatico se servono più colonne */}
                         <table className="w-full text-left border-collapse" style={{ minWidth: 'max-content' }}>
                             <thead>
                                 <tr>
@@ -504,14 +551,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                         newRows[rowIndex].cells[colIndex] = e.target.value;
                                                         handleTableUpdate({ ...tableData, rows: newRows });
                                                     }}
+                                                    onPaste={(e) => handlePaste(e, rowIndex, colIndex)} // MAGIC EXCEL HANDLER HERE
                                                     disabled={!isEditor}
                                                     rows={1}
                                                     className="w-full bg-transparent border-0 text-sm text-gray-700 p-4 focus:ring-2 focus:ring-blue-100 outline-none resize-none overflow-hidden Outfit transition-all"
                                                     style={{ minHeight: '56px' }}
                                                     ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-                                                    placeholder="Inserisci testo..."
+                                                    placeholder="Inserisci testo o incolla da Excel..."
                                                 />
-                                                {/* Pulsante Rimuovi Riga visibile sull'ultima cella della riga in hover */}
                                                 {isEditor && tableData.rows.length > 1 && colIndex === tableData.headers.length - 1 && (
                                                     <button onClick={() => {
                                                         const newRows = tableData.rows.filter((_, idx) => idx !== rowIndex);
@@ -669,7 +716,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         
                         {blockMenuOpen && (
                             <div className="absolute bottom-full mb-4 right-0 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeInFast p-2 z-[61]" ref={blockMenuRef}>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard dell'Area"}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard"}</div>
                                 <button onClick={() => addBlock('objectives')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
                                     <Target size={16} className="text-red-500"/> 
                                     <span className="text-gray-700 font-medium">Obiettivi Macro</span>
@@ -696,7 +743,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </button>
                                 
                                 <div className="h-px bg-gray-100 my-2 mx-2"></div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom Aggiuntivi</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom</div>
                                 
                                 <button onClick={() => addBlock('text')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
                                     <AlignLeft size={16} className="text-gold-500"/> Box di Testo Formattato
