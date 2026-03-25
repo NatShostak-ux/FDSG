@@ -49,7 +49,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
     }, [activeView]);
 
-    // === GESTIONE FOCUS RICERCA (SOLO SE ESISTE UN FOCUS ATTIVO) ===
+    // === GESTIONE FOCUS RICERCA ===
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') {
@@ -77,13 +77,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     setTimeout(() => {
                         el.style.boxShadow = 'none';
                         el.style.backgroundColor = 'transparent';
-                        // IMPORTANTE: Segnala all'App che abbiamo gestito il focus
                         if (onFocusHandled) onFocusHandled();
                     }, 2000);
                 }
             }, 150);
         } else {
-            // Se non c'è focus (navigazione normale dalla sidebar), forza lo scroll in alto
             window.scrollTo(0, 0);
         }
     }, [searchFocusItem, activeView]);
@@ -336,14 +334,17 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
             <Card title="Attività a Regime" icon={Clock}>
                 <div className="space-y-4">
+                    <p className="text-sm text-gray-500 font-medium">Attività incrementali e trasformative rispetto al modello attuale</p>
+                    
                     {isEditor && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 mt-2">
                             <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
                             <Button variant="secondary" onClick={handleAddRoutineTask}>+ Aggiungi</Button>
                         </div>
                     )}
+                    
                     {routineTasks.length === 0 ? (
-                        <div className="text-gray-400 text-sm italic">Nessuna attività day-by-day definita.</div>
+                        <div className="text-gray-400 text-sm italic mt-4">Nessuna attività day-by-day definita.</div>
                     ) : (
                         <div className="space-y-2 mt-4">
                             {routineTasks.map((task) => (
