@@ -62,81 +62,174 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
 
     const handleGoToEdit = () => {
         if (modalProject && modalProject.areaId) {
-            // Se abbiamo la funzione di focus, prepariamo l'illuminazione
             if (setSearchFocusItem) {
                 setSearchFocusItem({ type: 'project', id: modalProject.id });
             }
-            
-            // Cambiamo vista all'area corretta
             setActiveView(modalProject.areaId);
-            
-            // Chiudiamo modale e resettiamo scroll
             setModalProject(null);
             setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
         }
     };
 
+    // === ESTRATTORE UNIVERSALE ===
+    const getAggregatedAreaData = (areaId) => {
+        const areaData = activeScenario?.data?.[areaId] || {};
+        
+        const blocksToUse = (areaData.blocks && areaData.blocks.length > 0) 
+            ? areaData.blocks 
+            : [
+                { id: 'std_obj', type: 'objectives', title: 'Obiettivi Macro' },
+                { id: 'std_phasing', type: 'phasing', title: 'Descrizione Qualitativa del Phasing' },
+                { id: 'std_gantt', type: 'gantt', title: 'Pianificazione Iniziative' },
+                { id: 'std_ksms', type: 'ksms', title: 'Key Success Metrics (KSM)' },
+                { id: 'std_routine', type: 'routine', title: 'Attività a Regime' }
+            ];
+
+        let aggregated = {
+            objectives: [],
+            phasing: [],
+            projects: [],
+            ksms: [],
+            routine: [],
+            importance: areaData.importance || 0
+        };
+
+        blocksToUse.forEach(block => {
+            const isLegacy = block.id.startsWith('std_');
+
+            if (block.type === 'objectives') {
+                const key = isLegacy ? 'objectives' : `${block.id}_objectives`;
+                if (areaData[key]) {
+                    aggregated.objectives.push({ title: block.title, content: areaData[key] });
+                }
+            } else if (block.type === 'phasing') {
+                let blockPhasing = [];
+                [1, 2, 3].forEach(y => {
+                    const key = isLegacy ? `evolution_y${y}` : `${block.id}_y${y}`;
+                    if (areaData[key]) {
+                        blockPhasing.push({ year: y, content: areaData[key] });
+                    }
+                });
+                if (blockPhasing.length > 0) {
+                    aggregated.phasing.push({ title: block.title, years: blockPhasing });
+                }
+            } else if (block.type === 'gantt') {
+                const key = isLegacy ? 'projects' : `${block.id}_projects`;
+                const projs = areaData[key] || [];
+                if (projs.length > 0) {
+                    aggregated.projects.push(...projs.map(p => ({ ...p, ganttOriginTitle: block.title })));
+                }
+            } else if (block.type === 'ksms') {
+                const key = isLegacy ? 'ksms' : `${block.id}_ksms`;
+                const ksms = areaData[key] || [];
+                if (ksms.length > 0) {
+                    aggregated.ksms.push(...ksms.map(k => ({ ...k, originTitle: block.title })));
+                }
+            } else if (block.type === 'routine') {
+                const key = isLegacy ? 'routine' : `${block.id}_routine`;
+                const r = areaData[key] || [];
+                if (r.length > 0) {
+                    aggregated.routine.push(...r.map(t => ({ ...t, originTitle: block.title })));
+                }
+            }
+        });
+
+        // Fallback per salvataggi legacy senza blocchi
+        if (aggregated.projects.length === 0 && areaData.projects?.length > 0) {
+            aggregated.projects = areaData.projects.map(p => ({ ...p, ganttOriginTitle: 'Pianificazione Iniziative' }));
+        }
+        if (aggregated.ksms.length === 0 && areaData.ksms?.length > 0) {
+            aggregated.ksms = areaData.ksms.map(k => ({ ...k, originTitle: 'Metriche (KSM)' }));
+        }
+        if (aggregated.routine.length === 0 && areaData.routine?.length > 0) {
+            aggregated.routine = areaData.routine.map(t => ({ ...t, originTitle: 'Attività a Regime' }));
+        }
+
+        return aggregated;
+    };
+
     const renderCellContent = (areaId, fieldId) => {
-        const areaData = activeScenario.data[areaId] || {};
         const areaDef = EXPERTISE_AREAS.find(a => a.id === areaId);
+        const agg = getAggregatedAreaData(areaId);
 
         switch (fieldId) {
             case 'objectives':
-                return areaData.objectives 
-                    ? <div className="text-[13px] text-gray-700 leading-relaxed space-y-2 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: areaData.objectives }} /> 
-                    : <span className="text-gray-400 italic text-xs">Nessun obiettivo</span>;
+                if (agg.objectives.length === 0) return <span className="text-gray-400 italic text-xs">Nessun obiettivo</span>;
+                return (
+                    <div className="space-y-4">
+                        {agg.objectives.map((obj, i) => (
+                            <div key={i}>
+                                {agg.objectives.length > 1 && <h4 className="text-[9px] uppercase font-bold text-blue-500 mb-1">{obj.title}</h4>}
+                                <div className="text-[13px] text-gray-700 leading-relaxed space-y-2 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: obj.content }} />
+                            </div>
+                        ))}
+                    </div>
+                );
             
             case 'projects':
-                return (areaData.projects || []).length > 0 ? (
+                if (agg.projects.length === 0) return <span className="text-gray-400 italic text-xs">Nessun progetto</span>;
+                return (
                     <div className="space-y-3">
-                        {areaData.projects.map(p => (
+                        {agg.projects.map((p, i) => (
                             <div 
-                                key={p.id} 
+                                key={p.id || i} 
                                 onClick={() => handleProjectClick(p, areaDef)}
                                 className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative overflow-hidden cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group"
                             >
                                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
-                                <div className="flex items-center gap-2 pl-2">
-                                    {areaDef?.icon && <areaDef.icon size={14} style={{ color: areaDef?.hex }} />}
-                                    <span className="font-bold text-[14px] text-gray-900 group-hover:text-blue-700 transition-colors">{p.title || 'Senza Titolo'}</span>
+                                <div className="pl-2">
+                                    {agg.projects.some(proj => proj.ganttOriginTitle !== p.ganttOriginTitle) && (
+                                        <span className="text-[9px] font-bold text-blue-500 uppercase block mb-1">{p.ganttOriginTitle}</span>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {areaDef?.icon && <areaDef.icon size={14} style={{ color: areaDef?.hex }} />}
+                                        <span className="font-bold text-[14px] text-gray-900 group-hover:text-blue-700 transition-colors">{p.title || 'Senza Titolo'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide pl-2">
+                                <div className="flex justify-between items-center text-[11px] text-gray-500 font-bold uppercase tracking-wide pl-2 mt-1">
                                     <span>{p.start} &rarr; {p.end}</span>
                                     <span>Effort: {p.effort} | Impatto: {p.impact}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
-                ) : <span className="text-gray-400 italic text-xs">Nessun progetto</span>;
+                );
 
             case 'importance':
-                const role = getStrategicRole(areaData.importance || 0);
+                const role = getStrategicRole(agg.importance);
                 return <div className="flex items-center gap-2 font-bold text-sm text-gray-800 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 inline-flex">{role.icon} {role.label}</div>;
 
             case 'phasing':
-                const years = [1, 2, 3].filter(y => areaData[`evolution_y${y}`]);
-                if (years.length === 0) return <span className="text-gray-400 italic text-xs">Nessun phasing</span>;
+                if (agg.phasing.length === 0) return <span className="text-gray-400 italic text-xs">Nessun phasing</span>;
                 return (
-                    <div className="space-y-4">
-                        {years.map(y => (
-                            <div key={y} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">Anno {y}</div>
-                                <div className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none pl-2" dangerouslySetInnerHTML={{ __html: areaData[`evolution_y${y}`] }} />
+                    <div className="space-y-6">
+                        {agg.phasing.map((phaseBlock, i) => (
+                            <div key={i} className="space-y-4">
+                                {agg.phasing.length > 1 && <h4 className="text-[9px] uppercase font-bold text-blue-500">{phaseBlock.title}</h4>}
+                                {phaseBlock.years.map(y => (
+                                    <div key={y.year} className="bg-gray-50/50 p-3 rounded-xl border border-gray-100 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
+                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">Anno {y.year}</div>
+                                        <div className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none pl-2" dangerouslySetInnerHTML={{ __html: y.content }} />
+                                    </div>
+                                ))}
                             </div>
                         ))}
                     </div>
                 );
 
             case 'ksms':
-                const ksms = areaData.ksms || [];
-                return ksms.length > 0 ? (
+                if (agg.ksms.length === 0) return <span className="text-gray-400 italic text-xs">Nessuna metrica</span>;
+                return (
                     <div className="space-y-3">
-                        {ksms.map(k => (
-                            <div key={k.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-3 relative overflow-hidden">
+                        {agg.ksms.map((k, i) => (
+                            <div key={k.id || i} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm flex items-center gap-3 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <div className="w-2 h-2 rounded-full flex-shrink-0 ml-1" style={{ backgroundColor: areaDef?.hex }}></div>
-                                <div>
+                                <div className="flex-grow">
+                                    {agg.ksms.some(ksm => ksm.originTitle !== k.originTitle) && (
+                                        <span className="text-[9px] font-bold text-blue-500 uppercase block mb-0.5">{k.originTitle}</span>
+                                    )}
                                     <div className="font-bold text-sm text-gray-800 mb-0.5">{k.name}</div>
                                     <div className="flex gap-4 text-[11px]">
                                         <span className="text-gray-400 font-bold uppercase tracking-wide">As Is: <span className="text-gray-700">{k.valueAsIs || '-'}</span></span>
@@ -146,20 +239,26 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                             </div>
                         ))}
                     </div>
-                ) : <span className="text-gray-400 italic text-xs">Nessuna metrica</span>;
+                );
 
             case 'routine':
-                return (areaData.routine || []).length > 0 ? (
+                if (agg.routine.length === 0) return <span className="text-gray-400 italic text-xs">Nessuna attività</span>;
+                return (
                     <ul className="space-y-2">
-                        {areaData.routine.map(t => (
-                            <li key={t.id} className="flex items-start gap-2.5 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100 relative overflow-hidden">
+                        {agg.routine.map((t, i) => (
+                            <li key={t.id || i} className="flex items-start gap-2.5 text-[13px] text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: areaDef?.hex }}></div>
                                 <Clock size={16} className="text-gray-400 mt-0.5 flex-shrink-0 ml-1" />
-                                <span className="leading-snug">{t.text}</span>
+                                <div className="leading-snug w-full">
+                                    {agg.routine.some(rout => rout.originTitle !== t.originTitle) && (
+                                        <span className="text-[9px] font-bold text-blue-500 uppercase block mb-0.5">{t.originTitle}</span>
+                                    )}
+                                    {t.text}
+                                </div>
                             </li>
                         ))}
                     </ul>
-                ) : <span className="text-gray-400 italic text-xs">Nessuna attività</span>;
+                );
 
             default: return null;
         }
@@ -175,9 +274,14 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                         
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center relative">
                             <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: modalProject.areaColor }}></div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                                </div>
+                                {modalProject.ganttOriginTitle && (
+                                    <span className="text-[9px] text-gray-400 mt-0.5 ml-6 italic">{modalProject.ganttOriginTitle}</span>
+                                )}
                             </div>
                             <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
                         </div>
@@ -291,7 +395,7 @@ const CompareAreas = ({ activeScenario, setActiveView, setSearchFocusItem }) => 
                 </div>
             </div>
 
-            {/* TABELLA */}
+            {/* TABELLA CONFRONTO */}
             {selectedAreas.length > 0 && selectedFields.length > 0 ? (
                 <div className="bg-white rounded-[24px] border border-gray-200 shadow-xl overflow-hidden animate-fadeIn">
                     <div className="overflow-x-auto">
