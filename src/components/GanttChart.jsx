@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 const GanttChart = ({ 
     projects, 
@@ -115,21 +116,26 @@ const GanttChart = ({
         const barElement = e.currentTarget;
         const textSpan = barElement.querySelector('span');
 
-        // CONTROLLO TRONCAMENTO: Se il testo ci sta tutto, non mostrare il tooltip
-        // Aggiungiamo +2 di tolleranza per gestire i subpixel rendering dei browser
+        // Se il testo ci sta tutto, non mostrare il tooltip
         if (textSpan && textSpan.scrollWidth <= textSpan.clientWidth + 2) {
             return; 
         }
 
         const rect = barElement.getBoundingClientRect();
         
+        // Se la barra si trova molto in alto nello schermo (< 250px dal top), 
+        // c'è il rischio di scontrarsi con gli header. Invertiamo il tooltip.
+        const isTop = rect.top > 250; 
+        const yPos = isTop ? rect.top : rect.bottom;
+
         setTooltipData({
             title: project.title || 'Nuovo Progetto',
             start: project.start,
             end: project.end,
             color: areaColor,
             x: rect.left + rect.width / 2,
-            y: rect.top
+            y: yPos,
+            isTop: isTop
         });
     };
 
@@ -178,19 +184,28 @@ const GanttChart = ({
     return (
         <div className="w-full border border-gray-200 rounded-lg bg-white relative font-sans Outfit">
             
-            {/* TOOLTIP GLOBALE IN OVERLAY (FIXED) */}
-            {tooltipData && (
+            {/* PORTAL TOOLTIP GLOBALE: Viene appeso al body così è sempre sopra a tutto */}
+            {tooltipData && createPortal(
                 <div 
-                    className="fixed bg-white text-slate-700 text-[11px] px-3 py-2 rounded-lg shadow-xl border border-gray-200 z-[9999] whitespace-normal w-max max-w-[280px] font-normal pointer-events-none animate-fadeInFast Outfit"
+                    className="fixed bg-white text-slate-700 text-[11px] px-3 py-2 rounded-lg shadow-xl border border-gray-200 z-[99999] whitespace-normal w-max max-w-[280px] font-normal pointer-events-none animate-fadeInFast Outfit"
                     style={{
                         left: `${tooltipData.x}px`,
                         top: `${tooltipData.y}px`,
-                        transform: 'translate(-50%, -100%) translateY(-8px)' // Centra orizzontalmente, posiziona sopra
+                        // Inverte la traslazione se è "Top" (va sopra la barra) o "Bottom" (va sotto)
+                        transform: tooltipData.isTop ? 'translate(-50%, -100%) translateY(-8px)' : 'translate(-50%, 0) translateY(8px)'
                     }}
                 >
-                    {/* Triangolino sotto il tooltip */}
-                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-white"></div>
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-gray-200 -z-10"></div>
+                    {tooltipData.isTop ? (
+                        <>
+                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-white"></div>
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-gray-200 -z-10"></div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-b-4 border-b-white"></div>
+                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-b-[5px] border-b-gray-200 -z-10"></div>
+                        </>
+                    )}
 
                     <div className="flex items-center gap-2 mb-1">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tooltipData.color }}></div>
@@ -199,7 +214,8 @@ const GanttChart = ({
                     <div className="text-slate-500 text-[10px] uppercase tracking-wider Outfit ml-3.5">
                         {tooltipData.start} → {tooltipData.end}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <div className="w-full overflow-x-auto custom-scrollbar" ref={containerRef}>
