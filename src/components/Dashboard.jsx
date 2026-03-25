@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Euro, List, TrendingUp, Calendar, Target, X, ChevronRight, ChevronDown, ChevronUp, Filter, Activity, Zap } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
@@ -23,16 +23,13 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
     
     const [expandedKSMs, setExpandedKSMs] = useState({});
 
-    // === BLOCCO DELLO SCROLL (Nuova Funzione) ===
-    // Quando una modale è aperta, impediamo alla pagina sotto di scorrere
+    // === BLOCCO DELLO SCROLL ===
     useEffect(() => {
         if (modalProject || isProjectPreviewOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
         }
-        
-        // Pulizia: se il componente viene distrutto, sblocchiamo comunque lo scroll
         return () => {
             document.body.style.overflow = 'unset';
         };
@@ -42,28 +39,94 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
         setExpandedKSMs(prev => ({ ...prev, [areaId]: !prev[areaId] }));
     };
 
+    // === ESTRATTORE MASTER: TUTTI I PROGETTI IN SINCRONIA CON I BLOCCHI ATTIVI ===
+    const allProjects = useMemo(() => {
+        let projects = [];
+        if (!activeScenario || !activeScenario.data) return projects;
+
+        EXPERTISE_AREAS.forEach(area => {
+            const areaData = activeScenario.data[area.id];
+            if (!areaData) return;
+
+            // Identifichiamo i blocchi esatti dell'area (se non ci sono, usiamo i default dell'Editor)
+            const blocksToUse = (areaData.blocks && areaData.blocks.length > 0) 
+                ? areaData.blocks 
+                : [
+                    { id: 'std_obj', type: 'objectives', title: 'Obiettivi Macro' },
+                    { id: 'std_phasing', type: 'phasing', title: 'Descrizione Qualitativa del Phasing' },
+                    { id: 'std_gantt', type: 'gantt', title: 'Pianificazione Iniziative' },
+                    { id: 'std_ksms', type: 'ksms', title: 'Key Success Metrics (KSM)' },
+                    { id: 'std_routine', type: 'routine', title: 'Attività a Regime' }
+                ];
+
+            blocksToUse.forEach(block => {
+                if (block.type === 'gantt') {
+                    const isLegacy = block.id.startsWith('std_');
+                    const key = isLegacy ? 'projects' : `${block.id}_projects`;
+                    const blockProjects = areaData[key] || [];
+                    
+                    const tagged = blockProjects.map(p => ({
+                        ...p,
+                        areaId: area.id,
+                        areaColor: area.hex,
+                        areaLabel: area.label,
+                        ganttOriginTitle: block.title || 'Pianificazione Iniziative'
+                    }));
+                    projects = [...projects, ...tagged];
+                }
+            });
+        });
+        return projects;
+    }, [activeScenario]);
+
+    // === ESTRATTORE MASTER: KSM PER AREA (Da tutti i blocchi KSM) ===
+    const getAreaKSMs = (areaId) => {
+        const areaData = activeScenario?.data?.[areaId];
+        if (!areaData) return [];
+        
+        let ksms = [];
+        const blocksToUse = (areaData.blocks && areaData.blocks.length > 0) 
+            ? areaData.blocks 
+            : [
+                { id: 'std_obj', type: 'objectives', title: 'Obiettivi Macro' },
+                { id: 'std_phasing', type: 'phasing', title: 'Descrizione Qualitativa del Phasing' },
+                { id: 'std_gantt', type: 'gantt', title: 'Pianificazione Iniziative' },
+                { id: 'std_ksms', type: 'ksms', title: 'Key Success Metrics (KSM)' },
+                { id: 'std_routine', type: 'routine', title: 'Attività a Regime' }
+            ];
+
+        blocksToUse.forEach(block => {
+            if (block.type === 'ksms') {
+                const isLegacy = block.id.startsWith('std_');
+                const key = isLegacy ? 'ksms' : `${block.id}_ksms`;
+                const blockKsms = areaData[key] || [];
+                const taggedKSMs = blockKsms.map(k => ({ ...k, originTitle: block.title }));
+                ksms = [...ksms, ...taggedKSMs];
+            }
+        });
+        return ksms;
+    };
+
+    // Ricalcolo del budget basato sul nuovo allProjects aggregato
     const calculateTotalBudgetRange = () => {
         let min = 0, max = 0;
-        EXPERTISE_AREAS.forEach(area => {
-            const projects = activeScenario.data[area.id]?.projects || [];
-            projects.forEach(p => { min += (Number(p.budgetMin) || 0); max += (Number(p.budgetMax) || 0); });
+        allProjects.forEach(p => { 
+            min += (Number(p.budgetMin) || 0); 
+            max += (Number(p.budgetMax) || 0); 
         });
         return { min, max };
     };
+    
     const budgetRange = calculateTotalBudgetRange();
     
-    const allProjects = EXPERTISE_AREAS.flatMap(area => {
-        const areaData = activeScenario.data[area.id];
-        return (areaData?.projects || []).map(p => ({ ...p, areaId: area.id, areaColor: area.hex, areaLabel: area.label }));
-    });
-
     const projectsByArea = EXPERTISE_AREAS.map(area => {
         const areaProjects = allProjects.filter(p => p.areaId === area.id);
         if (areaProjects.length === 0) return null;
         return { area, projects: areaProjects };
     }).filter(Boolean);
 
-    const hasAnyMetrics = EXPERTISE_AREAS.some(area => (activeScenario.data[area.id]?.ksms || []).length > 0);
+    // Controlla se c'è almeno una metrica scansionando le aree con l'estrattore
+    const hasAnyMetrics = EXPERTISE_AREAS.some(area => getAreaKSMs(area.id).length > 0);
 
     let filteredProjects = allProjects;
 
@@ -94,17 +157,14 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
         }
     };
 
-    // === TASTO "MODIFICA INIZIATIVA" CORRETTO ===
     const handleGoToEdit = () => {
         if (modalProject) {
-            // Se la funzione di focus esiste, prepara l'illuminazione del progetto
             if (setSearchFocusItem) {
                 setSearchFocusItem({ type: 'project', id: modalProject.id });
             }
-            // Cambia vista sull'area corrispondente
             setActiveView(modalProject.areaId);
-            setModalProject(null); // Chiude la modale
-            window.scrollTo(0, 0); // Riporta la vista in alto
+            setModalProject(null);
+            window.scrollTo(0, 0);
         }
     };
 
@@ -119,9 +179,14 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                         {/* Header Modale */}
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center relative">
                             <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: modalProject.areaColor }}></div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: modalProject.areaColor }}></div>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{modalProject.areaLabel}</span>
+                                </div>
+                                {modalProject.ganttOriginTitle && (
+                                    <span className="text-[9px] text-gray-400 mt-0.5 ml-6 italic">{modalProject.ganttOriginTitle}</span>
+                                )}
                             </div>
                             <button onClick={() => setModalProject(null)} className="text-gray-400 hover:text-gray-800 transition-colors p-1 rounded-full hover:bg-gray-100"><X size={20} /></button>
                         </div>
@@ -152,7 +217,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                                 )}
                             </div>
 
-                            {/* Descrizione (Renderizzata da HTML) */}
+                            {/* Descrizione */}
                             {modalProject.description && (
                                 <div className="mb-8">
                                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Descrizione</h4>
@@ -185,7 +250,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                 </div>
             )}
 
-            {/* PREVIEW LISTA PROGETTI (Modale Esistente) */}
+            {/* PREVIEW LISTA PROGETTI */}
             {isProjectPreviewOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fadeIn" onClick={() => setIsProjectPreviewOpen(false)}>
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -225,7 +290,6 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                 </div>
             )}
 
-            {/* SEZIONE NASCOSTA TRAMITE FEATURE FLAG */}
             {SHOW_FINANCIALS_AND_LIST && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
@@ -312,6 +376,7 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                         activeAreaId={filterArea !== 'all' ? filterArea : null}
                         onUpdateProject={updateProjectBatch} 
                         onSelectProject={openProjectModal} 
+                        isEditor={false}
                     />
                     {filteredProjects.length === 0 && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-20">
@@ -324,11 +389,11 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
             <Card title="Riepilogo Metriche di Successo (KSM)" icon={Target} noPadding>
                 <div className="p-4 md:p-6 bg-slate-50/50">
                     {!hasAnyMetrics ? (
-                        <div className="text-center py-8 text-gray-400 italic">Nessuna metrica definita.</div>
+                        <div className="text-center py-8 text-gray-400 italic">Nessuna metrica definita nelle aree.</div>
                     ) : (
                         <div className="space-y-4">
                             {EXPERTISE_AREAS.map(area => {
-                                const areaKSMs = activeScenario.data[area.id]?.ksms || [];
+                                const areaKSMs = getAreaKSMs(area.id);
                                 if (areaKSMs.length === 0) return null;
                                 
                                 const isExpanded = expandedKSMs[area.id] || false;
@@ -355,6 +420,12 @@ const Dashboard = ({ activeScenario, setActiveView, updateProjectBatch, setSearc
                                                     {areaKSMs.map(ksm => (
                                                         <div key={ksm.id} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                                                             <div className="flex-grow pr-4">
+                                                                {/* Titolo modulo di origine */}
+                                                                {ksm.originTitle && (
+                                                                    <span className="text-[9px] uppercase font-bold tracking-widest mb-1 block" style={{ color: area.hex }}>
+                                                                        {ksm.originTitle}
+                                                                    </span>
+                                                                )}
                                                                 <span className="font-bold text-gray-900 text-sm block mb-1">{ksm.name || 'Metrica senza nome'}</span>
                                                                 {ksm.description && <div className="text-xs text-gray-500 line-clamp-2" dangerouslySetInnerHTML={{ __html: ksm.description }} />}
                                                             </div>
