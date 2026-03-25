@@ -24,6 +24,51 @@ export const getStrategicRole = (val) => {
 
 const generateUniqueId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+// --- EXCEL PARSER ---
+// Questo parser intelligente decodifica il formato "CSV" usato dalla clipboard di Excel/Sheets,
+// rispettando le virgolette per le celle multi-riga.
+const parseExcelString = (text) => {
+    let rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+        let nextChar = text[i + 1];
+
+        if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+                currentCell += '"'; // virgolette escapate
+                i++; // salta la prossima
+            } else {
+                inQuotes = !inQuotes; // toggle stato
+            }
+        } else if (char === '\t' && !inQuotes) {
+            currentRow.push(currentCell);
+            currentCell = '';
+        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+            if (char === '\r' && nextChar === '\n') i++;
+            currentRow.push(currentCell);
+            rows.push(currentRow);
+            currentRow = [];
+            currentCell = '';
+        } else {
+            currentCell += char;
+        }
+    }
+    currentRow.push(currentCell);
+    if (currentRow.length > 0 || rows.length > 0) {
+        rows.push(currentRow);
+    }
+    
+    // Pulisce l'ultima riga se è un artefatto vuoto
+    if (rows.length > 1 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') {
+        rows.pop();
+    }
+    return rows;
+};
+
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null, onFocusHandled }) => {
     
     // --- STATI LOCALI ---
@@ -58,7 +103,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
     const currentRole = getStrategicRole(data.importance);
 
-    // Autoseleziona il primo progetto
+    // Autoseleziona il primo progetto disponibile nel primo blocco Gantt utile
     useEffect(() => {
         if (!selectedProjectId) {
             for (let b of blocks) {
@@ -303,15 +348,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                     <input type="text" value={en} className={`enabler-input-${blockSelectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700 w-full`} onChange={(e) => {
                                                         const next = [...(blockSelectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                    }} onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            const next = [...(blockSelectedProject.enablers || [""])];
-                                                            next.splice(i + 1, 0, "");
-                                                            handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                            setTimeout(() => document.querySelectorAll(`.enabler-input-${blockSelectedProject.id}`)[i + 1]?.focus(), 10);
-                                                        }
-                                                    }} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
+                                                    }} onKeyDown={(e) => handleEnablerKeyDown(e, i, blockSelectedProject.id, blockSelectedProject.enablers || [""], handleUpdateProject)} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
                                                     {isEditor && <button onClick={() => {
                                                         const next = blockSelectedProject.enablers.filter((_, idx) => idx !== i);
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next.length ? next : [""]);
@@ -462,26 +499,41 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             };
 
             // LOGICA INTEGRAZIONE EXCEL PASTE
-            const handlePaste = (e, startRow, startCol) => {
+            const handlePaste = (e, rowIndex, colIndex) => {
                 const pasteData = e.clipboardData.getData('text');
                 if (!pasteData) return;
 
-                // Se è solo un testo semplice senza a capo o tab, lasciamo fare il paste nativo
-                if (!pasteData.includes('\n') && !pasteData.includes('\t')) {
-                    return; 
+                const parsedRows = parseExcelString(pasteData);
+
+                // Se l'utente sta incollando UNA SOLA cella da Excel, 
+                // lasciamo fare il paste nativo per inserire il testo alla posizione del cursore!
+                if (parsedRows.length === 1 && parsedRows[0].length === 1) {
+                    // C'è un piccolo trick: se Excel ha avvolto il testo in virgolette, il parser le ha tolte.
+                    // Per evitare che l'utente si becchi le virgolette di Excel, sostituiamo il testo
+                    const textarea = e.target;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const textToInsert = parsedRows[0][0]; 
+                    
+                    const currentCellText = tableData.rows[rowIndex].cells[colIndex] || "";
+                    const newText = currentCellText.substring(0, start) + textToInsert + currentCellText.substring(end);
+                    
+                    const newRows = [...tableData.rows];
+                    newRows[rowIndex].cells[colIndex] = newText;
+                    
+                    e.preventDefault();
+                    handleTableUpdate({ ...tableData, rows: newRows });
+                    return;
                 }
 
-                e.preventDefault(); // Blocca il paste nativo della textarea
+                // Incolla multiplo (Copia/Incolla di un range di celle Excel)
+                e.preventDefault();
+                let updatedRows = tableData.rows.map(r => ({ ...r, cells: [...r.cells] }));
 
-                // Dividiamo per righe (Excel usa \r\n o \n) e rimuoviamo l'ultima riga vuota se presente
-                const rowsToPaste = pasteData.replace(/\r?\n$/, '').split(/\r\n|\n/);
-                
-                let updatedRows = tableData.rows.map(r => ({ ...r, cells: [...r.cells] })); // Copia profonda
+                parsedRows.forEach((rowArray, i) => {
+                    const targetRowIndex = rowIndex + i;
 
-                rowsToPaste.forEach((rowString, i) => {
-                    const targetRowIndex = startRow + i;
-                    
-                    // Se la riga di destinazione non esiste, la creiamo! Espansione automatica.
+                    // Espansione automatica delle righe
                     if (targetRowIndex >= updatedRows.length) {
                         updatedRows.push({
                             id: generateUniqueId('row_auto'),
@@ -489,11 +541,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         });
                     }
 
-                    // Excel separa le colonne con un Tab (\t)
-                    const cellsToPaste = rowString.split('\t');
-                    cellsToPaste.forEach((cellText, j) => {
-                        const targetColIndex = startCol + j;
-                        // Incolliamo solo se la colonna esiste nella nostra tabella
+                    rowArray.forEach((cellText, j) => {
+                        const targetColIndex = colIndex + j;
+                        // Restringiamo l'incolla solo alle colonne attualmente esistenti
                         if (targetColIndex < tableData.headers.length) {
                             updatedRows[targetRowIndex].cells[targetColIndex] = cellText;
                         }
@@ -551,7 +601,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                         newRows[rowIndex].cells[colIndex] = e.target.value;
                                                         handleTableUpdate({ ...tableData, rows: newRows });
                                                     }}
-                                                    onPaste={(e) => handlePaste(e, rowIndex, colIndex)} // MAGIC EXCEL HANDLER HERE
+                                                    onPaste={(e) => handlePaste(e, rowIndex, colIndex)}
                                                     disabled={!isEditor}
                                                     rows={1}
                                                     className="w-full bg-transparent border-0 text-sm text-gray-700 p-4 focus:ring-2 focus:ring-blue-100 outline-none resize-none overflow-hidden Outfit transition-all"
