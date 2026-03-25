@@ -115,27 +115,21 @@ const GanttChart = ({
         const barElement = e.currentTarget;
         const textSpan = barElement.querySelector('span');
 
-        // CONTROLLO TRONCAMENTO: Se il testo ci sta tutto, non mostrare il tooltip (nessun disturbo inutile)
+        // CONTROLLO TRONCAMENTO: Se il testo ci sta tutto, non mostrare il tooltip
+        // Aggiungiamo +2 di tolleranza per gestire i subpixel rendering dei browser
         if (textSpan && textSpan.scrollWidth <= textSpan.clientWidth + 2) {
             return; 
         }
 
         const rect = barElement.getBoundingClientRect();
         
-        // CONTROLLO SPAZIO VERTICALE (SMART POSITIONING)
-        // Se la barra è troppo in alto (es. prima riga della dashboard o scrollata in alto), 
-        // posiziona il tooltip SOTTO la barra anziché sopra per evitare che venga tagliato.
-        const isTop = rect.top > 160; 
-        const yPos = isTop ? rect.top : rect.bottom;
-
         setTooltipData({
             title: project.title || 'Nuovo Progetto',
             start: project.start,
             end: project.end,
             color: areaColor,
             x: rect.left + rect.width / 2,
-            y: yPos,
-            isTop: isTop // Passiamo il flag per girare il CSS
+            y: rect.top
         });
     };
 
@@ -184,29 +178,19 @@ const GanttChart = ({
     return (
         <div className="w-full border border-gray-200 rounded-lg bg-white relative font-sans Outfit">
             
-            {/* TOOLTIP GLOBALE IN OVERLAY (FIXED CON SMART POSITIONING) */}
+            {/* TOOLTIP GLOBALE IN OVERLAY (FIXED) */}
             {tooltipData && (
                 <div 
-                    className="fixed bg-white text-slate-700 text-[11px] px-3 py-2 rounded-lg shadow-xl border border-gray-200 z-[99999] whitespace-normal w-max max-w-[280px] font-normal pointer-events-none animate-fadeInFast Outfit"
+                    className="fixed bg-white text-slate-700 text-[11px] px-3 py-2 rounded-lg shadow-xl border border-gray-200 z-[9999] whitespace-normal w-max max-w-[280px] font-normal pointer-events-none animate-fadeInFast Outfit"
                     style={{
                         left: `${tooltipData.x}px`,
                         top: `${tooltipData.y}px`,
-                        // Se c'è spazio lo mette sopra (translate -100%), altrimenti lo mette sotto
-                        transform: tooltipData.isTop ? 'translate(-50%, -100%) translateY(-8px)' : 'translate(-50%, 0) translateY(8px)'
+                        transform: 'translate(-50%, -100%) translateY(-8px)' // Centra orizzontalmente, posiziona sopra
                     }}
                 >
-                    {/* Triangolino punta in giù (se tooltip in alto) o in su (se tooltip in basso) */}
-                    {tooltipData.isTop ? (
-                        <>
-                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-white"></div>
-                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-gray-200 -z-10"></div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-b-4 border-b-white"></div>
-                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-b-[5px] border-b-gray-200 -z-10"></div>
-                        </>
-                    )}
+                    {/* Triangolino sotto il tooltip */}
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-white"></div>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-x-[5px] border-x-transparent border-t-[5px] border-t-gray-200 -z-10"></div>
 
                     <div className="flex items-center gap-2 mb-1">
                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tooltipData.color }}></div>
