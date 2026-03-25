@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout } from 'lucide-react';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
@@ -61,6 +61,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     useEffect(() => {
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeView]);
 
     // --- GESTIONE CLIC ESTERNO PER MENU BLOCCHI ---
@@ -106,7 +107,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         } else {
             window.scrollTo(0, 0);
         }
-    }, [searchFocusItem, activeView]);
+    }, [searchFocusItem, activeView, onFocusHandled]);
 
     // --- HANDLERS BLOCCHI ---
     const moveBlock = (index, direction) => {
@@ -121,7 +122,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     };
 
     const removeBlock = (blockId) => {
-        if (!isEditor || !window.confirm("Vuoi davvero rimuovere questa sezione? I dati rimarranno nel database ma non saranno più visibili in quest'area.")) return;
+        if (!isEditor || !window.confirm("Vuoi davvero rimuovere questa sezione? I dati rimarranno nel database ma non saranno più visibili.")) return;
         updateAreaData(activeView, 'blocks', blocks.filter(b => b.id !== blockId));
     };
 
@@ -144,6 +145,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             case 'ksms': newBlock.title = 'Key Success Metrics (KSM)'; break;
             case 'routine': newBlock.title = 'Attività a Regime'; break;
             case 'text': newBlock.title = 'Nuova Sezione Testo'; newBlock.contentId = generateUniqueId('content'); break;
+            default: break;
         }
 
         updateAreaData(activeView, 'blocks', [...blocks, newBlock]);
@@ -173,30 +175,31 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     if (!area) return null;
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
 
-    // --- RENDERER DEI BLOCCHI ---
+    // --- RENDERER PIATTO DEI BLOCCHI ---
     const renderBlock = (block, index) => {
         const isStandard = ['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type);
         let Icon = Target;
         let blockContent = null;
         let isCustomText = false;
         let titleText = block.title;
+        let actionBtn = null;
 
         if (block.type === 'objectives') {
             Icon = Target;
             blockContent = (
-                <div id="target-objective" className="p-6">
-                    <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} disabled={!isEditor} placeholder="Inserisci gli obiettivi macro..." />
+                <div id="target-objective">
+                    <AdvancedEditor key={`obj-${block.id}-${activeView}`} value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} disabled={!isEditor} placeholder="Inserisci gli obiettivi macro..." />
                 </div>
             );
         } else if (block.type === 'phasing') {
             Icon = Calendar;
             blockContent = (
-                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {[1, 2, 3].map(y => (
                         <div key={y} id={`target-phasing-${y}`} className="bg-slate-50 border border-gray-100 p-4 rounded-xl h-full flex flex-col transition-all hover:bg-white hover:shadow-sm">
                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Anno {y}</div>
                             <div className="bg-white border border-gray-200 rounded-lg flex-grow overflow-hidden">
-                                <AdvancedEditor value={data[`evolution_y${y}`] || ''} onChange={(v) => updateAreaData(activeView, `evolution_y${y}`, v)} disabled={!isEditor} placeholder={`Focus Anno ${y}...`} />
+                                <AdvancedEditor key={`phasing-${y}-${block.id}-${activeView}`} value={data[`evolution_y${y}`] || ''} onChange={(v) => updateAreaData(activeView, `evolution_y${y}`, v)} disabled={!isEditor} placeholder={`Focus Anno ${y}...`} />
                             </div>
                         </div>
                     ))}
@@ -204,6 +207,15 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         } else if (block.type === 'gantt') {
             Icon = Calendar;
+            actionBtn = (
+                <button onClick={() => {
+                    const newId = generateUniqueId('proj');
+                    updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
+                    setSelectedProjectId(newId);
+                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                    <Plus size={16} /> Aggiungi Progetto
+                </button>
+            );
             blockContent = (
                 <>
                     <div className="p-4 bg-white border-b border-gray-100">
@@ -211,7 +223,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     </div>
                     <div className="p-6 bg-slate-50/30" id="target-project-details">
                         {selectedProject ? (
-                            <div className="space-y-6 max-w-4xl">
+                            <div className="space-y-6 w-full">
                                 {/* TITOLO E CESTINO */}
                                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                                     <input type="text" className="w-full text-2xl font-bold border-0 focus:ring-0 p-0 bg-transparent" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} placeholder="Nome del progetto..." />
@@ -222,8 +234,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     }} className="text-gray-300 hover:text-red-500 ml-4"><Trash2 size={18}/></button>}
                                 </div>
                                 
-                                {/* LAYOUT 100% VERTICALE */}
-                                <div className="space-y-6">
+                                {/* LAYOUT 100% VERTICALE ED ESPANSO */}
+                                <div className="space-y-6 w-full">
                                     
                                     {/* 1. TEMPISTICHE E PRIORITÀ */}
                                     <div className="flex flex-wrap items-center gap-6">
@@ -247,21 +259,21 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     </div>
 
                                     {/* 2. DESCRIZIONE */}
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 w-full">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Descrizione Iniziativa</label>
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                                            <AdvancedEditor value={selectedProject.description || ''} onChange={(v) => updateProject(activeView, selectedProject.id, 'description', v)} disabled={!isEditor} placeholder="Aggiungi una descrizione dettagliata..." />
+                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm w-full">
+                                            <AdvancedEditor key={`proj-desc-${selectedProject.id}`} value={selectedProject.description || ''} onChange={(v) => updateProject(activeView, selectedProject.id, 'description', v)} disabled={!isEditor} placeholder="Aggiungi una descrizione dettagliata..." />
                                         </div>
                                     </div>
 
                                     {/* 3. ABILITATORI */}
-                                    <div className="space-y-3 bg-slate-50 border border-gray-200 rounded-xl p-5">
+                                    <div className="space-y-3 bg-slate-50 border border-gray-200 rounded-xl p-5 w-full">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Abilitatori Chiave (Key Enablers)</label>
-                                        <div className="space-y-2">
+                                        <div className="space-y-2 w-full">
                                             {(selectedProject.enablers || [""]).map((en, i) => (
-                                                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm group transition-all hover:border-gray-200">
+                                                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm group transition-all hover:border-gray-200 w-full">
                                                     <div className="w-2 h-2 rounded-full border-2 border-gray-300 flex-shrink-0"></div>
-                                                    <input type="text" value={en} className={`enabler-input-${selectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700`} onChange={(e) => {
+                                                    <input type="text" value={en} className={`enabler-input-${selectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700 w-full`} onChange={(e) => {
                                                         const next = [...(selectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         updateProject(activeView, selectedProject.id, 'enablers', next);
                                                     }} onKeyDown={(e) => handleEnablerKeyDown(e, i, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
@@ -276,12 +288,21 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
                                 </div>
                             </div>
-                        ) : <p className="text-center text-gray-400 italic py-16">Seleziona un'iniziativa dal Gantt per visualizzare i dettagli</p>}
+                        ) : <p className="text-center text-gray-400 italic py-16">{"Seleziona un'iniziativa dal Gantt per visualizzare i dettagli"}</p>}
                     </div>
                 </>
             );
         } else if (block.type === 'ksms') {
             Icon = Target;
+            actionBtn = (
+                <button onClick={() => {
+                    const newId = generateUniqueId('ksm');
+                    updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+                    setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
+                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                    <Plus size={16} /> Aggiungi Metrica
+                </button>
+            );
             blockContent = (
                 <div className="space-y-4 p-6 bg-slate-50/30">
                     {(data.ksms || []).map(ksm => {
@@ -311,7 +332,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                 <input type="text" value={ksm.targetValue} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} className="w-full bg-transparent border-0 p-0 font-bold text-blue-600 text-sm Outfit" disabled={!isEditor} placeholder="€ 500k" />
                                             </div>
                                         </div>
-                                        <AdvancedEditor value={ksm.description || ''} onChange={(v) => updateKSM(activeView, ksm.id, 'description', v)} disabled={!isEditor} />
+                                        <AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(v) => updateKSM(activeView, ksm.id, 'description', v)} disabled={!isEditor} />
                                     </div>
                                 )}
                             </div>
@@ -364,7 +385,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             const contentKey = block.contentId || `custom_text_${block.id}`;
             blockContent = (
                 <div className="p-6">
-                    <AdvancedEditor value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />
+                    <AdvancedEditor key={`custom-${contentKey}`} value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />
                 </div>
             );
         }
@@ -389,23 +410,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     
                     <div className="flex items-center gap-4">
                         {/* TASTI AGGIUNGI IN ALTO A DESTRA */}
-                        {block.type === 'gantt' && isEditor && (
-                            <button onClick={() => {
-                                const newId = generateUniqueId('proj');
-                                updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
-                                setSelectedProjectId(newId);
-                            }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
-                                <Plus size={16} /> Aggiungi Iniziativa
-                            </button>
-                        )}
-                        {block.type === 'ksms' && isEditor && (
-                            <button onClick={() => {
-                                const newId = generateUniqueId('ksm');
-                                updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
-                                setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
-                            }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
-                                <Plus size={16} /> Aggiungi Metrica
-                            </button>
+                        {actionBtn && isEditor && (
+                            <div>{actionBtn}</div>
                         )}
 
                         {isEditor && (
@@ -418,7 +424,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         )}
                     </div>
                 </div>
-                <div>
+                <div className={block.type === 'gantt' ? '' : (block.type === 'ksms' ? '' : 'p-6')}>
                     {blockContent}
                 </div>
             </div>
@@ -437,7 +443,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-900"><X size={20} /></button>
                         </div>
                         <div className="p-6">
-                            <AdvancedEditor value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} placeholder="Aggiungi note personali su quest'area, non visibili nel PDF." />
+                            <AdvancedEditor key={`notes-area-${activeView}`} value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} placeholder="Aggiungi note personali su quest'area, non visibili nel PDF." />
                         </div>
                     </div>
                 </div>
@@ -506,7 +512,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         <button 
                             onClick={() => setBlockMenuOpen(!blockMenuOpen)} 
                             className="bg-[#bf9000] text-white rounded-full h-14 border-[3px] border-white shadow-[0_8px_30px_rgba(191,144,0,0.4)] flex items-center transition-all duration-300 ease-in-out overflow-hidden group hover:w-[190px] w-14 justify-start px-[13px]"
-                            title="Aggiungi un nuovo modulo a quest'area"
+                            title="Aggiungi un nuovo modulo"
                         >
                             <div className="flex-shrink-0 flex items-center justify-center">
                                 <LayoutGrid size={22}/>
@@ -519,12 +525,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         {/* Menu dei blocchi */}
                         {blockMenuOpen && (
                             <div className="absolute bottom-full mb-4 right-0 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeInFast p-2 z-[61]" ref={blockMenuRef}>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Standard dell'Area</div>
-                                <button onClick={() => addBlock('objectives')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit"><Target size={16} className="text-red-500"/> Obiettivi Macro</button>
-                                <button onClick={() => addBlock('phasing')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit"><Calendar size={16} className="text-blue-500"/> Phasing Qualitativo</button>
-                                <button onClick={() => addBlock('gantt')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit"><Calendar size={16} className="text-purple-500"/> Gantt Iniziative</button>
-                                <button onClick={() => addBlock('ksms')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit"><Target size={16} className="text-green-500"/> Metriche KSM</button>
-                                <button onClick={() => addBlock('routine')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit"><Clock size={16} className="text-yellow-600"/> Attività a Regime</button>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard dell'Area"}</div>
+                                <button onClick={() => addBlock('objectives')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit text-gray-700 font-medium"><Target size={16} className="text-red-500"/> Obiettivi Macro</button>
+                                <button onClick={() => addBlock('phasing')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit text-gray-700 font-medium"><Calendar size={16} className="text-blue-500"/> Phasing Qualitativo</button>
+                                <button onClick={() => addBlock('gantt')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit text-gray-700 font-medium"><Calendar size={16} className="text-purple-500"/> Gantt Iniziative</button>
+                                <button onClick={() => addBlock('ksms')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit text-gray-700 font-medium"><Target size={16} className="text-green-500"/> Metriche KSM</button>
+                                <button onClick={() => addBlock('routine')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3.5 rounded-2xl transition-colors Outfit text-gray-700 font-medium"><Clock size={16} className="text-yellow-600"/> Attività a Regime</button>
                                 
                                 <div className="h-px bg-gray-100 my-2 mx-2"></div>
                                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom Aggiuntivi</div>
