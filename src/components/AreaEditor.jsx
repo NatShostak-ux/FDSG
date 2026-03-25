@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, PlusCircle, Layout, LayoutGrid } from 'lucide-react';
-import Card from './ui/Card';
-import Button from './ui/Button';
-import GanttChart from './GanttChart';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout } from 'lucide-react';
 import AdvancedEditor from './AdvancedEditor';
-import { GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA, ARAD_GOLD } from '../utils/constants';
+import GanttChart from './GanttChart';
+import { GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
 export const STRATEGIC_ROLES = [
     { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Iniziative che creano un nuovo vantaggio competitivo." },
@@ -35,7 +33,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const [expandedKSMs, setExpandedKSMs] = useState({});
     const [blockMenuOpen, setBlockMenuOpen] = useState(false);
     
-    // REF per il menu dei blocchi per la chiusura al click esterno
+    // REF per il menu dei blocchi (chiusura cliccando fuori)
     const blockMenuRef = useRef(null);
     const blockButtonRef = useRef(null);
 
@@ -67,19 +65,17 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     // --- GESTIONE CLIC ESTERNO PER MENU BLOCCHI ---
     useEffect(() => {
         function handleClickOutside(event) {
-            // Se il menu è aperto e il clic non è sul menu o sul pulsante che lo apre, chiudilo
             if (blockMenuOpen && 
                 blockMenuRef.current && !blockMenuRef.current.contains(event.target) &&
                 blockButtonRef.current && !blockButtonRef.current.contains(event.target)) {
                 setBlockMenuOpen(false);
             }
         }
-        
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [blockMenuOpen]);
 
-    // --- FOCUS GESTION (SEARCH) ---
+    // --- FOCUS GESTION ---
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') setSelectedProjectId(searchFocusItem.id);
@@ -97,7 +93,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     el.style.transition = 'all 0.4s ease-out';
-                    el.style.boxShadow = '0 0 0 6px rgba(191, 144, 0, 0.4), 0 0 40px rgba(191, 144, 0, 0.2)'; // Usiamo il gold per il focus
+                    el.style.boxShadow = '0 0 0 6px rgba(191, 144, 0, 0.4), 0 0 40px rgba(191, 144, 0, 0.2)'; 
                     el.style.backgroundColor = '#fdfdfc';
                     setTimeout(() => {
                         el.style.boxShadow = 'none';
@@ -131,7 +127,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const addBlock = (type) => {
         if (!isEditor) return;
         
-        // Se è un modulo standard, usiamo ID fisso. Se è custom, ID dinamico.
         const standardTypes = ['objectives', 'phasing', 'gantt', 'ksms', 'routine'];
         const isStandard = standardTypes.includes(type);
         
@@ -141,7 +136,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             title: ''
         };
 
-        // Impostiamo il titolo predefinito
         switch (type) {
             case 'objectives': newBlock.title = 'Obiettivi Macro'; break;
             case 'phasing': newBlock.title = 'Phasing Qualitativo'; break;
@@ -153,6 +147,11 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
         updateAreaData(activeView, 'blocks', [...blocks, newBlock]);
         setBlockMenuOpen(false);
+
+        // Scroll automatico in fondo alla pagina per vedere il nuovo blocco
+        setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 150);
     };
 
     const updateBlockTitle = (blockId, newTitle) => {
@@ -160,7 +159,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'blocks', newBlocks);
     };
 
-    // --- HANDLERS INTERNI ---
     const handleEnablerKeyDown = (e, index, projectId, currentEnablers) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -174,13 +172,53 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     if (!area) return null;
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
 
-    // --- RENDERER PIATTO DEI BLOCCHI (Più performante) ---
+    // --- WRAPPER DEI BLOCCHI ---
+    const BlockWrapper = ({ block, index, icon: Icon, titleText, isCustomText, actionButton, children }) => (
+        <div className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
+            <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3.5 flex-grow pr-4">
+                    <Icon size={18} className="text-gray-400" />
+                    {isCustomText || !['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type) ? (
+                        <input 
+                            type="text" value={titleText} 
+                            onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
+                            disabled={!isEditor}
+                            className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit"
+                            placeholder="Titolo della sezione custom..." 
+                        />
+                    ) : (
+                        <span className="font-bold text-gray-900 text-lg Outfit">{titleText}</span>
+                    )}
+                </div>
+                
+                <div className="flex items-center gap-4">
+                    {/* Bottone Aggiungi Opzionale */}
+                    {actionButton && isEditor && (
+                        <div>{actionButton}</div>
+                    )}
+                    
+                    {/* Controlli Editor (Frecce e Cestino) */}
+                    {isEditor && (
+                        <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
+                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
+                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
+                            <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
+                            <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <div className={block.type === 'gantt' ? '' : 'p-6'}>
+                {children}
+            </div>
+        </div>
+    );
+
+    // --- RENDERER PIATTO DEI BLOCCHI ---
     const renderBlock = (block, index) => {
-        const isStandard = ['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type);
-        let Icon = Target;
         let blockContent = null;
-        let isCustomText = false;
-        let titleText = block.title;
+        let Icon = Target;
+        let actionBtn = null;
 
         if (block.type === 'objectives') {
             Icon = Target;
@@ -205,26 +243,26 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         } else if (block.type === 'gantt') {
             Icon = Calendar;
+            actionBtn = (
+                <button onClick={() => {
+                    const newId = generateUniqueId('proj');
+                    updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
+                    setSelectedProjectId(newId);
+                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                    <Plus size={16} /> Aggiungi Progetto
+                </button>
+            );
             blockContent = (
                 <>
-                    <div className="p-4 bg-slate-50 border-b border-gray-200">
+                    <div className="p-4 bg-white border-b border-gray-100">
                         <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} activeAreaId={area.id} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
-                        {isEditor && (
-                            <div className="mt-4 flex justify-end">
-                                <Button variant="ghost" icon={Plus} onClick={() => {
-                                    const newId = generateUniqueId('proj');
-                                    // Creiamo un'iniziativa perfettamente vuota
-                                    updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
-                                    setSelectedProjectId(newId);
-                                }} className="text-blue-600 hover:bg-blue-50 font-medium">Aggiungi Iniziativa</Button>
-                            </div>
-                        )}
                     </div>
-                    <div className="p-6" id="target-project-details">
+                    <div className="p-6 bg-slate-50/30" id="target-project-details">
                         {selectedProject ? (
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                    <input type="text" className="w-full text-2xl font-bold border-0 focus:ring-0 p-0" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} placeholder="Nome del progetto..." />
+                            <div className="space-y-6 max-w-4xl">
+                                {/* TITOLO */}
+                                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                                    <input type="text" className="w-full text-2xl font-bold border-0 focus:ring-0 p-0 bg-transparent" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} placeholder="Nome del progetto..." />
                                     {isEditor && <button onClick={() => {
                                         const newProjects = rawProjects.filter(p => p.id !== selectedProject.id);
                                         updateAreaData(activeView, 'projects', newProjects);
@@ -232,41 +270,46 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     }} className="text-gray-300 hover:text-red-500 ml-4"><Trash2 size={18}/></button>}
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                                    {/* COLONNA SINISTRA: Descrizione, Date, Priorità */}
-                                    <div className="space-y-6">
-                                        <div className="flex flex-wrap items-center gap-4 bg-slate-50 border border-gray-100 rounded-xl p-4 shadow-inner">
-                                            <div className="flex items-center gap-3 bg-white border border-gray-100 p-2.5 rounded-lg">
-                                                <Calendar size={16} className="text-gray-400" />
-                                                <input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-28" />
-                                                <span className="text-gray-300">→</span>
-                                                <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 text-right w-28" />
+                                {/* LAYOUT 100% VERTICALE */}
+                                <div className="space-y-6">
+                                    
+                                    {/* RIGA 1: TEMPISTICHE E PRIORITÀ */}
+                                    <div className="flex flex-wrap items-center gap-6">
+                                        <div className="flex items-center gap-3 bg-slate-50 border border-gray-200 rounded-lg p-2 px-3">
+                                            <Calendar size={16} className="text-gray-400" />
+                                            <input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold text-gray-800 focus:ring-0 w-28" />
+                                            <span className="text-gray-300">→</span>
+                                            <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold text-gray-800 focus:ring-0 w-28 text-right" />
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Prio</span>
+                                                <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-10 focus:ring-2 focus:ring-blue-100" style={{ color: area.hex }} />
                                             </div>
-                                            <div className="flex items-center gap-4 ml-auto">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] uppercase font-bold text-gray-400">Prio</span>
-                                                    <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-12 bg-white border border-gray-100 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-gray-100 focus:border-gray-200" style={{ color: area.hex }} />
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] uppercase font-bold text-gray-400">Eff</span>
-                                                    <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-12 bg-white border border-gray-100 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-gray-100 focus:border-gray-200 text-gray-600" />
-                                                </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Eff</span>
+                                                <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-10 focus:ring-2 focus:ring-blue-100 text-gray-600" />
                                             </div>
                                         </div>
-                                        <div className="space-y-2.5">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block ml-1">Descrizione Iniziativa</label>
+                                    </div>
+
+                                    {/* RIGA 2: DESCRIZIONE */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Descrizione Iniziativa</label>
+                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
                                             <AdvancedEditor value={selectedProject.description || ''} onChange={(v) => updateProject(activeView, selectedProject.id, 'description', v)} disabled={!isEditor} placeholder="Aggiungi una descrizione dettagliata..." />
                                         </div>
                                     </div>
-                                    
-                                    {/* COLONNA DESTRA: Abilitatori */}
-                                    <div className="space-y-3 p-6 bg-slate-50 border border-gray-100 rounded-2xl">
+
+                                    {/* RIGA 3: ABILITATORI */}
+                                    <div className="space-y-3 bg-slate-50 border border-gray-200 rounded-xl p-5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Abilitatori Chiave (Key Enablers)</label>
                                         <div className="space-y-2">
                                             {(selectedProject.enablers || [""]).map((en, i) => (
-                                                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-2 border border-gray-100 group transition-all hover:border-gray-200">
-                                                    <div className="w-2 h-2 rounded-full border-2 border-gray-300"></div>
-                                                    <input type="text" value={en} className={`enabler-input-${selectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium`} onChange={(e) => {
+                                                <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm group transition-all hover:border-gray-200">
+                                                    <div className="w-2 h-2 rounded-full border-2 border-gray-300 flex-shrink-0"></div>
+                                                    <input type="text" value={en} className={`enabler-input-${selectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700`} onChange={(e) => {
                                                         const next = [...(selectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         updateProject(activeView, selectedProject.id, 'enablers', next);
                                                     }} onKeyDown={(e) => handleEnablerKeyDown(e, i, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
@@ -278,6 +321,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                             ))}
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
                         ) : <p className="text-center text-gray-400 italic py-16">Seleziona un'iniziativa dal Gantt per visualizzare i dettagli</p>}
@@ -286,8 +330,17 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         } else if (block.type === 'ksms') {
             Icon = Target;
+            actionBtn = (
+                <button onClick={() => {
+                    const newId = generateUniqueId('ksm');
+                    updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+                    setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
+                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                    <Plus size={16} /> Aggiungi Metrica
+                </button>
+            );
             blockContent = (
-                <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-gray-100 shadow-inner">
+                <div className="space-y-4 p-6 bg-slate-50/30">
                     {(data.ksms || []).map(ksm => {
                         const isExpanded = expandedKSMs[ksm.id];
                         return (
@@ -321,15 +374,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                             </div>
                         );
                     })}
-                    {isEditor && (
-                        <div className="flex justify-end">
-                            <Button variant="ghost" icon={Plus} onClick={() => {
-                                const newId = generateUniqueId('ksm');
-                                updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
-                                setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
-                            }} className="text-blue-600 font-medium">Aggiungi Metrica</Button>
-                        </div>
-                    )}
                 </div>
             );
         } else if (block.type === 'routine') {
@@ -378,37 +422,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             blockContent = <AdvancedEditor value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />;
         }
 
-        return (
-            <div key={block.id} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
-                <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3.5 flex-grow pr-4">
-                        <Icon size={18} className="text-gray-400" />
-                        {isCustomText || !isStandard ? (
-                            <input 
-                                type="text" value={titleText} 
-                                onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
-                                disabled={!isEditor}
-                                className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit"
-                                placeholder="Titolo della sezione custom..." 
-                            />
-                        ) : (
-                            <span className="font-bold text-gray-900 text-lg Outfit">{titleText}</span>
-                        )}
-                    </div>
-                    {isEditor && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-4">
-                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
-                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
-                            <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
-                            <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
-                        </div>
-                    )}
-                </div>
-                <div className={block.type === 'gantt' ? '' : 'p-6'}>
-                    {blockContent}
-                </div>
-            </div>
-        );
+        return <BlockWrapper key={block.id} block={block} index={index} icon={Icon} titleText={block.title} isCustomText={isCustomText} actionButton={actionBtn}>{blockContent}</BlockWrapper>;
     };
 
     return (
@@ -486,22 +500,19 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
             {/* --- TOOLBAR AGGIUNTA BLOCCHI (Floating CTA GOLD) --- */}
             {isEditor && (
-                <div className="fixed bottom-8 right-8 z-[60]" ref={blockButtonRef}>
+                <div className="fixed bottom-8 right-8 z-[100]" ref={blockButtonRef}>
                     <div className="relative">
-                        {/* Bottone CTA GOLD - Cerchio perfetto */}
+                        {/* Bottone CTA GOLD - Si allarga su hover */}
                         <button 
                             onClick={() => setBlockMenuOpen(!blockMenuOpen)} 
-                            className="bg-[#bf9000] text-white rounded-full h-16 w-16 shadow-2xl flex items-center justify-center border-4 border-white transition-all hover:scale-110 active:scale-95 group"
-                            title="Aggiungi un nuovo modulo a quest'area"
+                            className="bg-[#bf9000] text-white rounded-full h-14 border-[3px] border-white shadow-[0_8px_30px_rgba(191,144,0,0.4)] flex items-center transition-all duration-300 ease-in-out overflow-hidden group hover:w-[190px] w-14 justify-start px-[13px]"
                         >
-                            <LayoutGrid size={24}/>
-                            
-                            {/* Etichetta hover (espansione gold con testo) */}
-                            <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 hidden group-hover:block transition-opacity opacity-0 group-hover:opacity-100 animate-fadeInFast">
-                                <div className="bg-[#bf9000] text-white text-sm font-bold px-4 py-2 rounded-lg whitespace-nowrap shadow-lg">
-                                    Aggiungi Modulo
-                                </div>
+                            <div className="flex-shrink-0 flex items-center justify-center">
+                                <LayoutGrid size={22}/>
                             </div>
+                            <span className="font-bold text-sm whitespace-nowrap ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                                Aggiungi Modulo
+                            </span>
                         </button>
                         
                         {/* Menu dei blocchi */}
