@@ -48,10 +48,11 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
   // Stati per l'interazione
   const [showPhase1Tree, setShowPhase1Tree] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  const [showFuture, setShowFuture] = useState(false);
 
   const run = () => {
     setStep(0);
-    // L'animazione si ferma ora allo scenario 1
+    setShowFuture(false);
     const delays = [150, 800, 1500];
     delays.forEach((d, i) => setTimeout(() => setStep(i + 1), d));
   };
@@ -61,12 +62,17 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
     run();
   };
 
+  const revealFuture = () => {
+    setShowFuture(true);
+    const delays = [150, 750, 1350, 1950, 2550];
+    delays.forEach((d, i) => setTimeout(() => setStep(4 + i), d));
+  };
+
   const s = (n) => step >= n;
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 animate-fadeIn pb-24 relative">
       
-      {/* TASTO SKIP */}
       <button 
           onClick={() => onSelectPhase(1)}
           className="absolute top-2 right-2 md:top-6 md:right-6 bg-white border border-gray-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 text-gray-900 text-[11px] font-bold tracking-widest uppercase px-6 py-3 rounded-full transition-all flex items-center gap-2 z-50 group"
@@ -254,7 +260,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                         Un ecosistema D2C moderno, ricco e interattivo che valorizza i punti di forza e sistema le falle attuali — costruendo una macchina di conversione solida su fondamenta sane.
                     </p>
                     
-                    {/* ZONA TARGET & BREAKDOWN ALBERO */}
                     <div className="flex flex-col gap-5 mt-8 relative">
                         <div className="flex items-center justify-between relative z-20">
                             <button
@@ -270,26 +275,20 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                     <ChevronDown size={14} className={`transition-transform duration-300 text-gray-400 ${showPhase1Tree ? 'rotate-180' : ''}`} />
                                 </span>
                             </button>
-                            <div className="text-sm font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: MASTER_COLORS.p1 }}>
-                                Esplora lo scenario <ChevronRight size={16}/>
-                            </div>
+                            {/* RIMOSSO IL TESTO DUPLICATO "ESPLORA LO SCENARIO" DALLA CARD */}
                         </div>
 
-                        {/* ALBERO INTERATTIVO CON ABILITATORI */}
                         {showPhase1Tree && (
                             <div 
                                 className="mt-5 ml-6 relative animate-fadeIn"
                                 onClick={(e) => e.stopPropagation()} 
                             >
                                 <div className="relative">
-                                    {/* Linea verticale principale dell'albero */}
                                     <div className="absolute left-0 top-3 bottom-0 w-px bg-gray-300 z-0"></div>
 
-                                    {/* LE 7 INIZIATIVE */}
                                     {PHASE_1_BREAKDOWN.map((item) => (
                                         <div key={item.id} className="relative flex items-center justify-between gap-3 pl-8 mb-5 group/item z-10">
                                             <div className="flex items-center gap-3">
-                                                {/* Ramo orizzontale e pallino */}
                                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-px bg-gray-300"></div>
                                                 <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
                                                 
@@ -305,7 +304,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                             >
                                                 <Info size={14} className="text-gray-400 hover:text-slate-800 cursor-help transition-colors" />
                                                 
-                                                {/* TOOLTIP OVERLAY */}
                                                 {activeTooltip === item.id && (
                                                     <div className="absolute right-6 top-1/2 -translate-y-1/2 w-64 bg-white text-gray-600 text-[13px] leading-relaxed p-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-gray-100 z-50 animate-fadeIn pointer-events-none">
                                                         <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-white border-r border-t border-gray-100 rotate-45"></div>
@@ -317,7 +315,6 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
                                     ))}
                                 </div>
 
-                                {/* ABILITATORI TRASVERSALI */}
                                 <div className="relative flex items-start pl-8 mt-8 pb-2 z-10">
                                     <div className="absolute left-0 -top-8 h-[42px] w-px bg-gray-300 z-0"></div>
                                     <div className="absolute left-0 top-[10px] w-6 h-px bg-gray-300 z-0"></div>
@@ -357,7 +354,7 @@ const MasterRoadmapView = ({ onSelectPhase }) => {
 
             <VConnector color={MASTER_COLORS.p1} height={52} visible={s(3)} />
 
-            {/* STEP 3: ESPLORA LO SCENARIO (EX-FUTURO) */}
+            {/* STEP 3: ESPLORA LO SCENARIO */}
             {s(3) && (
                 <div className="flex flex-col items-center animate-fadeIn">
                     <div className="flex items-center gap-4 w-full">
