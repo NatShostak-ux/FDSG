@@ -127,6 +127,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [blockMenuOpen]);
 
+    // --- FOCUS GESTION (AGGIORNATO E INTELLIGENTE) ---
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') setSelectedProjectId(searchFocusItem.id);
@@ -134,11 +135,24 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             
             setTimeout(() => {
                 let targetId = '';
-                if (searchFocusItem.type === 'objective') targetId = 'target-objective';
-                if (searchFocusItem.type === 'phasing') targetId = `target-phasing-${searchFocusItem.id}`;
-                if (searchFocusItem.type === 'project') targetId = 'target-project-details';
-                if (searchFocusItem.type === 'ksm') targetId = `target-ksm-${searchFocusItem.id}`;
-                if (searchFocusItem.type === 'routine') targetId = `target-routine-${searchFocusItem.id}`;
+                
+                // NUOVA LOGICA INTELLIGENTE: Trova dinamicamente in quale blocco si trova l'elemento
+                if (searchFocusItem.type === 'project') {
+                    const block = blocks.find(b => b.type === 'gantt' && (data[b.id.startsWith('std_') ? 'projects' : `${b.id}_projects`] || []).some(p => p.id === searchFocusItem.id));
+                    if (block) targetId = `block-wrapper-${block.id}`;
+                    else targetId = 'target-project-details'; // Fallback per vecchi salvataggi
+                } else if (searchFocusItem.type === 'ksm') {
+                    const block = blocks.find(b => b.type === 'ksms' && (data[b.id.startsWith('std_') ? 'ksms' : `${b.id}_ksms`] || []).some(k => k.id === searchFocusItem.id));
+                    if (block) targetId = `block-wrapper-${block.id}`;
+                    else targetId = `target-ksm-${searchFocusItem.id}`;
+                } else if (searchFocusItem.type === 'routine') {
+                    const block = blocks.find(b => b.type === 'routine' && (data[b.id.startsWith('std_') ? 'routine' : `${b.id}_routine`] || []).some(r => r.id === searchFocusItem.id));
+                    if (block) targetId = `block-wrapper-${block.id}`;
+                    else targetId = `target-routine-${searchFocusItem.id}`;
+                } else {
+                    if (searchFocusItem.type === 'objective') targetId = 'target-objective';
+                    if (searchFocusItem.type === 'phasing') targetId = `target-phasing-${searchFocusItem.id}`;
+                }
 
                 const el = document.getElementById(targetId);
                 if (el) {
@@ -154,7 +168,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 }
             }, 150);
         }
-    }, [searchFocusItem, activeView, onFocusHandled]);
+    }, [searchFocusItem, activeView, onFocusHandled, blocks, data]);
 
     const moveBlock = (index, direction) => {
         if (!isEditor) return;
