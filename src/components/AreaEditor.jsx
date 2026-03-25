@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout } from 'lucide-react';
-import AdvancedEditor from './AdvancedEditor';
+import Button from './ui/Button';
 import GanttChart from './GanttChart';
+import AdvancedEditor from './AdvancedEditor';
 import { GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
 export const STRATEGIC_ROLES = [
@@ -172,65 +173,25 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     if (!area) return null;
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
 
-    // --- WRAPPER DEI BLOCCHI ---
-    const BlockWrapper = ({ block, index, icon: Icon, titleText, isCustomText, actionButton, children }) => (
-        <div className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
-            <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3.5 flex-grow pr-4">
-                    <Icon size={18} className="text-gray-400" />
-                    {isCustomText || !['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type) ? (
-                        <input 
-                            type="text" value={titleText} 
-                            onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
-                            disabled={!isEditor}
-                            className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit"
-                            placeholder="Titolo della sezione custom..." 
-                        />
-                    ) : (
-                        <span className="font-bold text-gray-900 text-lg Outfit">{titleText}</span>
-                    )}
-                </div>
-                
-                <div className="flex items-center gap-4">
-                    {/* Bottone Aggiungi Opzionale */}
-                    {actionButton && isEditor && (
-                        <div>{actionButton}</div>
-                    )}
-                    
-                    {/* Controlli Editor (Frecce e Cestino) */}
-                    {isEditor && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
-                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
-                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
-                            <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
-                            <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className={block.type === 'gantt' ? '' : 'p-6'}>
-                {children}
-            </div>
-        </div>
-    );
-
-    // --- RENDERER PIATTO DEI BLOCCHI ---
+    // --- RENDERER DEI BLOCCHI ---
     const renderBlock = (block, index) => {
-        let blockContent = null;
+        const isStandard = ['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type);
         let Icon = Target;
-        let actionBtn = null;
+        let blockContent = null;
+        let isCustomText = false;
+        let titleText = block.title;
 
         if (block.type === 'objectives') {
             Icon = Target;
             blockContent = (
-                <div id="target-objective">
+                <div id="target-objective" className="p-6">
                     <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} disabled={!isEditor} placeholder="Inserisci gli obiettivi macro..." />
                 </div>
             );
         } else if (block.type === 'phasing') {
             Icon = Calendar;
             blockContent = (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                     {[1, 2, 3].map(y => (
                         <div key={y} id={`target-phasing-${y}`} className="bg-slate-50 border border-gray-100 p-4 rounded-xl h-full flex flex-col transition-all hover:bg-white hover:shadow-sm">
                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Anno {y}</div>
@@ -243,15 +204,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         } else if (block.type === 'gantt') {
             Icon = Calendar;
-            actionBtn = (
-                <button onClick={() => {
-                    const newId = generateUniqueId('proj');
-                    updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
-                    setSelectedProjectId(newId);
-                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
-                    <Plus size={16} /> Aggiungi Progetto
-                </button>
-            );
             blockContent = (
                 <>
                     <div className="p-4 bg-white border-b border-gray-100">
@@ -260,7 +212,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     <div className="p-6 bg-slate-50/30" id="target-project-details">
                         {selectedProject ? (
                             <div className="space-y-6 max-w-4xl">
-                                {/* TITOLO */}
+                                {/* TITOLO E CESTINO */}
                                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                                     <input type="text" className="w-full text-2xl font-bold border-0 focus:ring-0 p-0 bg-transparent" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} placeholder="Nome del progetto..." />
                                     {isEditor && <button onClick={() => {
@@ -273,9 +225,9 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 {/* LAYOUT 100% VERTICALE */}
                                 <div className="space-y-6">
                                     
-                                    {/* RIGA 1: TEMPISTICHE E PRIORITÀ */}
+                                    {/* 1. TEMPISTICHE E PRIORITÀ */}
                                     <div className="flex flex-wrap items-center gap-6">
-                                        <div className="flex items-center gap-3 bg-slate-50 border border-gray-200 rounded-lg p-2 px-3">
+                                        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-2.5 px-3">
                                             <Calendar size={16} className="text-gray-400" />
                                             <input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold text-gray-800 focus:ring-0 w-28" />
                                             <span className="text-gray-300">→</span>
@@ -285,24 +237,24 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Prio</span>
-                                                <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-10 focus:ring-2 focus:ring-blue-100" style={{ color: area.hex }} />
+                                                <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-11 focus:ring-2 focus:ring-blue-100" style={{ color: area.hex }} />
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Eff</span>
-                                                <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-10 focus:ring-2 focus:ring-blue-100 text-gray-600" />
+                                                <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-14 bg-white border border-gray-200 rounded-lg text-lg font-bold text-center h-11 focus:ring-2 focus:ring-blue-100 text-gray-600" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* RIGA 2: DESCRIZIONE */}
+                                    {/* 2. DESCRIZIONE */}
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Descrizione Iniziativa</label>
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
                                             <AdvancedEditor value={selectedProject.description || ''} onChange={(v) => updateProject(activeView, selectedProject.id, 'description', v)} disabled={!isEditor} placeholder="Aggiungi una descrizione dettagliata..." />
                                         </div>
                                     </div>
 
-                                    {/* RIGA 3: ABILITATORI */}
+                                    {/* 3. ABILITATORI */}
                                     <div className="space-y-3 bg-slate-50 border border-gray-200 rounded-xl p-5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Abilitatori Chiave (Key Enablers)</label>
                                         <div className="space-y-2">
@@ -330,15 +282,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         } else if (block.type === 'ksms') {
             Icon = Target;
-            actionBtn = (
-                <button onClick={() => {
-                    const newId = generateUniqueId('ksm');
-                    updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
-                    setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
-                }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
-                    <Plus size={16} /> Aggiungi Metrica
-                </button>
-            );
             blockContent = (
                 <div className="space-y-4 p-6 bg-slate-50/30">
                     {(data.ksms || []).map(ksm => {
@@ -379,7 +322,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         } else if (block.type === 'routine') {
             Icon = Clock;
             blockContent = (
-                <div className="space-y-2">
+                <div className="space-y-2 p-6">
                     <p className="text-sm text-gray-500 font-medium italic mb-5 ml-1">Attività incrementali e trasformative rispetto al modello attuale</p>
                     {isEditor && (
                         <div className="flex items-center gap-2 mb-4 bg-white p-1 rounded-xl border border-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-200">
@@ -419,10 +362,67 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             Icon = AlignLeft;
             isCustomText = true;
             const contentKey = block.contentId || `custom_text_${block.id}`;
-            blockContent = <AdvancedEditor value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />;
+            blockContent = (
+                <div className="p-6">
+                    <AdvancedEditor value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />
+                </div>
+            );
         }
 
-        return <BlockWrapper key={block.id} block={block} index={index} icon={Icon} titleText={block.title} isCustomText={isCustomText} actionButton={actionBtn}>{blockContent}</BlockWrapper>;
+        return (
+            <div key={block.id} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
+                <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3.5 flex-grow pr-4">
+                        <Icon size={18} className="text-gray-400" />
+                        {isCustomText || !isStandard ? (
+                            <input 
+                                type="text" value={titleText} 
+                                onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
+                                disabled={!isEditor}
+                                className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit"
+                                placeholder="Titolo della sezione custom..." 
+                            />
+                        ) : (
+                            <span className="font-bold text-gray-900 text-lg Outfit">{titleText}</span>
+                        )}
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                        {/* TASTI AGGIUNGI IN ALTO A DESTRA */}
+                        {block.type === 'gantt' && isEditor && (
+                            <button onClick={() => {
+                                const newId = generateUniqueId('proj');
+                                updateAreaData(activeView, 'projects', [...rawProjects, { id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 }]);
+                                setSelectedProjectId(newId);
+                            }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                                <Plus size={16} /> Aggiungi Iniziativa
+                            </button>
+                        )}
+                        {block.type === 'ksms' && isEditor && (
+                            <button onClick={() => {
+                                const newId = generateUniqueId('ksm');
+                                updateAreaData(activeView, 'ksms', [...(data.ksms || []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+                                setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
+                            }} className="flex items-center gap-1.5 text-sm font-bold text-red-600 hover:text-red-700 transition-colors">
+                                <Plus size={16} /> Aggiungi Metrica
+                            </button>
+                        )}
+
+                        {isEditor && (
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
+                                <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
+                                <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
+                                <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
+                                <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div>
+                    {blockContent}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -506,6 +506,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         <button 
                             onClick={() => setBlockMenuOpen(!blockMenuOpen)} 
                             className="bg-[#bf9000] text-white rounded-full h-14 border-[3px] border-white shadow-[0_8px_30px_rgba(191,144,0,0.4)] flex items-center transition-all duration-300 ease-in-out overflow-hidden group hover:w-[190px] w-14 justify-start px-[13px]"
+                            title="Aggiungi un nuovo modulo a quest'area"
                         >
                             <div className="flex-shrink-0 flex items-center justify-center">
                                 <LayoutGrid size={22}/>
@@ -529,7 +530,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom Aggiuntivi</div>
                                 <button onClick={() => addBlock('text')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800"><AlignLeft size={16} className="text-gold-500"/> Box di Testo Formattato</button>
                                 <button disabled className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 text-gray-400 cursor-not-allowed opacity-50"><Layout size={16}/> Tabella Dinamica (Soon)</button>
-                                <button disabled className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 text-gray-400 cursor-not-allowed opacity-50"><Target size={16}/> Organigramma Area (Soon)</button>
                             </div>
                         )}
                     </div>
