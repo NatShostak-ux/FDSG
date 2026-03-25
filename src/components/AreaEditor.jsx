@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout, Network } from 'lucide-react';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
@@ -25,8 +25,6 @@ export const getStrategicRole = (val) => {
 const generateUniqueId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 // --- EXCEL PARSER ---
-// Questo parser intelligente decodifica il formato "CSV" usato dalla clipboard di Excel/Sheets,
-// rispettando le virgolette per le celle multi-riga.
 const parseExcelString = (text) => {
     let rows = [];
     let currentRow = [];
@@ -39,10 +37,10 @@ const parseExcelString = (text) => {
 
         if (char === '"') {
             if (inQuotes && nextChar === '"') {
-                currentCell += '"'; // virgolette escapate
-                i++; // salta la prossima
+                currentCell += '"'; 
+                i++; 
             } else {
-                inQuotes = !inQuotes; // toggle stato
+                inQuotes = !inQuotes; 
             }
         } else if (char === '\t' && !inQuotes) {
             currentRow.push(currentCell);
@@ -62,7 +60,6 @@ const parseExcelString = (text) => {
         rows.push(currentRow);
     }
     
-    // Pulisce l'ultima riga se è un artefatto vuoto
     if (rows.length > 1 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') {
         rows.pop();
     }
@@ -103,7 +100,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
     const currentRole = getStrategicRole(data.importance);
 
-    // Autoseleziona il primo progetto disponibile nel primo blocco Gantt utile
     useEffect(() => {
         if (!selectedProjectId) {
             for (let b of blocks) {
@@ -119,7 +115,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeView, blocks]);
 
-    // --- GESTIONE CLIC ESTERNO PER MENU BLOCCHI ---
     useEffect(() => {
         function handleClickOutside(event) {
             if (blockMenuOpen && 
@@ -132,7 +127,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [blockMenuOpen]);
 
-    // --- FOCUS GESTION ---
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') setSelectedProjectId(searchFocusItem.id);
@@ -162,7 +156,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     }, [searchFocusItem, activeView, onFocusHandled]);
 
-    // --- HANDLERS BLOCCHI ---
     const moveBlock = (index, direction) => {
         if (!isEditor) return;
         const newBlocks = [...blocks];
@@ -196,6 +189,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             case 'routine': newBlock.title = 'Nuove Attività a Regime'; break;
             case 'text': newBlock.title = 'Nuova Sezione Testo'; newBlock.contentId = generateUniqueId('content'); break;
             case 'table': newBlock.title = 'Nuova Tabella Dinamica'; newBlock.contentId = generateUniqueId('table'); break;
+            case 'org_chart': newBlock.title = 'Organigramma Team'; newBlock.contentId = generateUniqueId('org'); break;
             default: break;
         }
 
@@ -498,42 +492,44 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 handleTableUpdate({ ...tableData, rows: [...tableData.rows, newRow] });
             };
 
-            // LOGICA INTEGRAZIONE EXCEL PASTE
+            // LOGICA INTEGRAZIONE PASTE INTELLIGENTE
             const handlePaste = (e, rowIndex, colIndex) => {
                 const pasteData = e.clipboardData.getData('text');
                 if (!pasteData) return;
 
-                const parsedRows = parseExcelString(pasteData);
-
-                // Se l'utente sta incollando UNA SOLA cella da Excel, 
-                // lasciamo fare il paste nativo per inserire il testo alla posizione del cursore!
-                if (parsedRows.length === 1 && parsedRows[0].length === 1) {
-                    // C'è un piccolo trick: se Excel ha avvolto il testo in virgolette, il parser le ha tolte.
-                    // Per evitare che l'utente si becchi le virgolette di Excel, sostituiamo il testo
+                if (!pasteData.includes('\t')) {
+                    e.preventDefault();
+                    let textToInsert = pasteData;
+                    if (textToInsert.startsWith('"') && textToInsert.endsWith('"\r\n')) {
+                        textToInsert = textToInsert.slice(1, -3).replace(/""/g, '"');
+                    } else if (textToInsert.startsWith('"') && textToInsert.endsWith('"')) {
+                        textToInsert = textToInsert.slice(1, -1).replace(/""/g, '"');
+                    }
+                    
                     const textarea = e.target;
                     const start = textarea.selectionStart;
                     const end = textarea.selectionEnd;
-                    const textToInsert = parsedRows[0][0]; 
-                    
                     const currentCellText = tableData.rows[rowIndex].cells[colIndex] || "";
-                    const newText = currentCellText.substring(0, start) + textToInsert + currentCellText.substring(end);
                     
+                    const newText = currentCellText.substring(0, start) + textToInsert + currentCellText.substring(end);
                     const newRows = [...tableData.rows];
                     newRows[rowIndex].cells[colIndex] = newText;
                     
-                    e.preventDefault();
                     handleTableUpdate({ ...tableData, rows: newRows });
+                    
+                    setTimeout(() => {
+                        textarea.selectionStart = textarea.selectionEnd = start + textToInsert.length;
+                    }, 10);
                     return;
                 }
 
-                // Incolla multiplo (Copia/Incolla di un range di celle Excel)
                 e.preventDefault();
+                const parsedRows = parseExcelString(pasteData);
                 let updatedRows = tableData.rows.map(r => ({ ...r, cells: [...r.cells] }));
 
                 parsedRows.forEach((rowArray, i) => {
                     const targetRowIndex = rowIndex + i;
 
-                    // Espansione automatica delle righe
                     if (targetRowIndex >= updatedRows.length) {
                         updatedRows.push({
                             id: generateUniqueId('row_auto'),
@@ -543,7 +539,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
                     rowArray.forEach((cellText, j) => {
                         const targetColIndex = colIndex + j;
-                        // Restringiamo l'incolla solo alle colonne attualmente esistenti
                         if (targetColIndex < tableData.headers.length) {
                             updatedRows[targetRowIndex].cells[targetColIndex] = cellText;
                         }
@@ -636,6 +631,119 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                     )}
                 </div>
             );
+        } else if (block.type === 'org_chart') {
+            Icon = Network;
+            const contentKey = block.contentId || `custom_org_${block.id}`;
+            const orgData = data[contentKey] || {
+                id: generateUniqueId('org_root'),
+                name: 'Nome Cognome',
+                role: 'Ruolo',
+                children: []
+            };
+
+            const handleOrgUpdate = (newData) => updateAreaData(activeView, contentKey, newData);
+
+            const updateOrgNode = (tree, id, field, value) => {
+                if (tree.id === id) return { ...tree, [field]: value };
+                if (tree.children) {
+                    return { ...tree, children: tree.children.map(c => updateOrgNode(c, id, field, value)) };
+                }
+                return tree;
+            };
+
+            const addOrgChild = (tree, parentId) => {
+                if (tree.id === parentId) {
+                    return {
+                        ...tree,
+                        children: [...(tree.children || []), { id: generateUniqueId('org_node'), name: '', role: '', children: [] }]
+                    };
+                }
+                if (tree.children) {
+                    return { ...tree, children: tree.children.map(c => addOrgChild(c, parentId)) };
+                }
+                return tree;
+            };
+
+            const removeOrgNode = (tree, idToRemove) => {
+                if (!tree.children) return tree;
+                return {
+                    ...tree,
+                    children: tree.children.filter(c => c.id !== idToRemove).map(c => removeOrgNode(c, idToRemove))
+                };
+            };
+
+            const onEditNode = (id, field, value) => handleOrgUpdate(updateOrgNode(orgData, id, field, value));
+            const onAddChild = (parentId) => handleOrgUpdate(addOrgChild(orgData, parentId));
+            const onRemoveNode = (id) => handleOrgUpdate(removeOrgNode(orgData, id));
+
+            // Logica Livelli Infiniti + Stile migliorato
+            const renderOrgNode = (node, parentId = null, depth = 0) => {
+                let bgClass = "bg-white border border-gray-200";
+                let textClass = "text-gray-700";
+                let subTextClass = "text-gray-400";
+                
+                if (depth === 0) {
+                    bgClass = "bg-slate-800 border border-slate-900 shadow-md";
+                    textClass = "text-white";
+                    subTextClass = "text-slate-300";
+                } else if (depth === 1) {
+                    bgClass = "bg-slate-600 border border-slate-700 shadow-sm";
+                    textClass = "text-white";
+                    subTextClass = "text-slate-200";
+                } else if (depth === 2) {
+                    bgClass = "bg-slate-100 border border-slate-200";
+                    textClass = "text-gray-800";
+                    subTextClass = "text-gray-500";
+                }
+
+                return (
+                    <li key={node.id}>
+                        <div className="inline-flex flex-col items-center relative">
+                            <div className={`rounded-xl p-3 shadow-sm min-w-[180px] w-[180px] relative group ${bgClass}`}>
+                                <input type="text" value={node.name} onChange={(e) => onEditNode(node.id, 'name', e.target.value)} disabled={!isEditor} placeholder="Nome Cognome" className={`w-full bg-transparent border-0 p-0 text-center font-bold text-sm focus:ring-0 outline-none ${textClass} placeholder-opacity-50`} />
+                                <input type="text" value={node.role} onChange={(e) => onEditNode(node.id, 'role', e.target.value)} disabled={!isEditor} placeholder="Ruolo" className={`w-full bg-transparent border-0 p-0 text-center text-xs mt-1.5 focus:ring-0 outline-none ${subTextClass} placeholder-opacity-50`} />
+                                
+                                {isEditor && parentId && (
+                                    <button onClick={() => onRemoveNode(node.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 hover:bg-red-600 hover:scale-110"><X size={12}/></button>
+                                )}
+                                {isEditor && (
+                                    <button onClick={() => onAddChild(node.id)} className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 hover:bg-blue-600 hover:scale-110"><Plus size={14}/></button>
+                                )}
+                            </div>
+                        </div>
+                        {node.children && node.children.length > 0 && (
+                            <ul>
+                                {node.children.map(child => renderOrgNode(child, node.id, depth + 1))}
+                            </ul>
+                        )}
+                    </li>
+                );
+            };
+
+            blockContent = (
+                <div className="p-6">
+                    <style>{`
+                        .org-tree-${block.id} ul { display: flex; justify-content: center; padding-top: 24px; position: relative; gap: 0px; margin: 0; padding-left: 0; }
+                        .org-tree-${block.id} li { float: left; text-align: center; list-style-type: none; position: relative; padding: 24px 6px 0 6px; }
+                        .org-tree-${block.id} li::before, .org-tree-${block.id} li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 24px; }
+                        .org-tree-${block.id} li::after { right: auto; left: 50%; border-left: 2px solid #cbd5e1; }
+                        .org-tree-${block.id} li:only-child::after, .org-tree-${block.id} li:only-child::before { display: none; }
+                        .org-tree-${block.id} li:only-child { padding-top: 0; }
+                        .org-tree-${block.id} li:first-child::before, .org-tree-${block.id} li:last-child::after { border: 0 none; }
+                        .org-tree-${block.id} li:last-child::before { border-right: 2px solid #cbd5e1; border-radius: 0 8px 0 0; }
+                        .org-tree-${block.id} li:first-child::after { border-radius: 8px 0 0 0; }
+                        .org-tree-${block.id} ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #cbd5e1; width: 0; height: 24px; transform: translateX(-1px); }
+                        .org-tree-${block.id} > ul::before { display: none; }
+                    `}</style>
+                    <div className="w-full overflow-x-auto custom-scrollbar pb-12 pt-4">
+                        <div className={`org-tree-${block.id} min-w-max inline-block w-full flex justify-center`}>
+                            <ul>
+                                {renderOrgNode(orgData)}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            );
         }
 
         return (
@@ -667,7 +775,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         )}
                     </div>
                 </div>
-                <div className={block.type === 'gantt' ? '' : (block.type === 'ksms' ? '' : (block.type === 'table' ? '' : 'p-6'))}>
+                <div className={block.type === 'gantt' ? '' : (block.type === 'ksms' ? '' : (block.type === 'table' ? '' : (block.type === 'org_chart' ? '' : 'p-6')))}>
                     {blockContent}
                 </div>
             </div>
@@ -801,6 +909,10 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 
                                 <button onClick={() => addBlock('table')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
                                     <Layout size={16} className="text-gold-500"/> Tabella Dinamica
+                                </button>
+
+                                <button onClick={() => addBlock('org_chart')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
+                                    <Network size={16} className="text-gold-500"/> Organigramma Team
                                 </button>
                             </div>
                         )}
