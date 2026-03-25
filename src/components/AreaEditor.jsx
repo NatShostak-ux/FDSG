@@ -1,60 +1,47 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, PlusCircle, Layout } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, ChevronRight, Check, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
-import { GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
+import { ARAD_BLUE, ARAD_GOLD, GANTT_START_YEAR, EXPERTISE_AREAS, EMPTY_AREA_DATA } from '../utils/constants';
 
-// --- COSTANTI RUOLI STRATEGICI ---
+const SHOW_BUDGET = false; 
+
 export const STRATEGIC_ROLES = [
-    { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Iniziative che creano un nuovo vantaggio competitivo." },
-    { id: 'core', value: 4, label: '4 - Core', icon: '⭐', title: '4 - Core (Business Critical)', desc: "Il motore attuale del business. Genera i ricavi oggi." },
-    { id: 'enabling', value: 3, label: '3 - Enabling', icon: '🏗️', title: '3 - Enabling (Foundational)', desc: 'Le fondamenta prerequisito per le altre aree.' },
-    { id: 'supporting', value: 2, label: '2 - Supporting', icon: '⚙️', title: '2 - Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale." },
-    { id: 'exploratory', value: 1, label: '1 - Exploratory', icon: '🧪', title: '1 - Exploratory (Innovation)', desc: "Iniziative per testare nuove acque." }
+    { id: 'strategic', value: 5, label: '5 - Strategic', icon: '🔥', title: '5 - Strategic (Transformational)', desc: "Non serve per sopravvivere oggi, ma serve per vincere domani. Sono le iniziative che creano un nuovo vantaggio competitivo, cambiano il modello di business o aprono nuovi mercati." },
+    { id: 'core', value: 4, label: '4 - Core', icon: '⭐', title: '4 - Core (Business Critical)', desc: "È il motore attuale del business. Genera i ricavi oggi o è vitale per le operations quotidiane." },
+    { id: 'enabling', value: 3, label: '3 - Enabling', icon: '🏗️', title: '3 - Enabling (Foundational / Strutturale)', desc: 'Sono le "fondamenta". I prerequisiti affinché le aree Core e Strategic possano esistere.' },
+    { id: 'supporting', value: 2, label: '2 - Supporting', icon: '⚙️', title: '2 - Supporting (Operational)', desc: "Attività necessarie al mantenimento aziendale, vanno ottimizzate e automatizzate." },
+    { id: 'exploratory', value: 1, label: '1 - Exploratory', icon: '🧪', title: '1 - Exploratory (Innovation / Sperimentale)', desc: "Iniziative ad alto rischio e alto potenziale per testare nuove acque." }
 ];
 
 export const getStrategicRole = (val) => {
     const num = Number(val) || 0;
-    if (num >= 5) return STRATEGIC_ROLES[0];
-    if (num === 4) return STRATEGIC_ROLES[1];
-    if (num === 3) return STRATEGIC_ROLES[2];
-    if (num === 2) return STRATEGIC_ROLES[3];
+    if (num >= 9 || num === 5) return STRATEGIC_ROLES[0];
+    if (num >= 7 || num === 4) return STRATEGIC_ROLES[1];
+    if (num >= 5 || num === 3) return STRATEGIC_ROLES[2];
+    if (num >= 3 || num === 2) return STRATEGIC_ROLES[3];
     return STRATEGIC_ROLES[4];
 };
 
-const generateUniqueId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const generateUniqueId = (prefix) => {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
 
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null, onFocusHandled }) => {
-    
-    // --- STATI LOCALI ---
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [newRoutineTask, setNewRoutineTask] = useState("");
     const [expandedKSMs, setExpandedKSMs] = useState({});
-    const [blockMenuOpen, setBlockMenuOpen] = useState(false);
 
-    // --- DATI AREA ---
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
-    const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
-    
-    // LOGICA DI LAYOUT DINAMICO
-    // Se non esistono blocchi, inizializziamo l'ordine standard
-    const blocks = useMemo(() => {
-        if (data.blocks && data.blocks.length > 0) return data.blocks;
-        return [
-            { id: 'std_obj', type: 'objectives', title: 'Obiettivi Macro' },
-            { id: 'std_phasing', type: 'phasing', title: 'Descrizione Qualitativa del Phasing' },
-            { id: 'std_gantt', type: 'gantt', title: 'Pianificazione Iniziative' },
-            { id: 'std_ksms', type: 'ksms', title: 'Key Success Metrics (KSM)' },
-            { id: 'std_routine', type: 'routine', title: 'Attivita a Regime' }
-        ];
-    }, [data.blocks]);
+    if (!area) return null;
 
+    const data = activeScenario.data[activeView] || { ...EMPTY_AREA_DATA };
     const rawProjects = Array.isArray(data.projects) ? data.projects : [];
-    const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
+    const areaProjects = rawProjects.map(p => ({ ...p, areaId: area.id }));
     const routineTasks = Array.isArray(data.routine) ? data.routine : [];
     const currentRole = getStrategicRole(data.importance);
 
@@ -62,40 +49,59 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         if (!selectedProjectId && areaProjects.length > 0) setSelectedProjectId(areaProjects[0].id);
     }, [activeView]);
 
-    // --- HANDLERS LAYOUT ---
-    const moveBlock = (index, direction) => {
-        if (!isEditor) return;
-        const newBlocks = [...blocks];
-        if (direction === 'up' && index > 0) {
-            [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
-        } else if (direction === 'down' && index < newBlocks.length - 1) {
-            [newBlocks[index + 1], newBlocks[index]] = [newBlocks[index], newBlocks[index + 1]];
+    // === GESTIONE FOCUS RICERCA ===
+    useEffect(() => {
+        if (searchFocusItem) {
+            if (searchFocusItem.type === 'project') {
+                setSelectedProjectId(searchFocusItem.id);
+            }
+            if (searchFocusItem.type === 'ksm') {
+                setExpandedKSMs(prev => ({ ...prev, [searchFocusItem.id]: true }));
+            }
+            
+            setTimeout(() => {
+                let targetId = '';
+                if (searchFocusItem.type === 'objective') targetId = 'target-objective';
+                if (searchFocusItem.type === 'phasing') targetId = `target-phasing-${searchFocusItem.id}`;
+                if (searchFocusItem.type === 'project') targetId = 'target-project-details';
+                if (searchFocusItem.type === 'ksm') targetId = `target-ksm-${searchFocusItem.id}`;
+                if (searchFocusItem.type === 'routine') targetId = `target-routine-${searchFocusItem.id}`;
+
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.transition = 'all 0.4s ease-out';
+                    el.style.boxShadow = '0 0 0 6px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2)';
+                    el.style.backgroundColor = '#f0f9ff';
+                    
+                    setTimeout(() => {
+                        el.style.boxShadow = 'none';
+                        el.style.backgroundColor = 'transparent';
+                        if (onFocusHandled) onFocusHandled();
+                    }, 2000);
+                }
+            }, 150);
+        } else {
+            window.scrollTo(0, 0);
         }
-        updateAreaData(activeView, 'blocks', newBlocks);
+    }, [searchFocusItem, activeView]);
+
+    const addProject = () => {
+        if (!isEditor) return;
+        const newId = generateUniqueId('proj');
+        updateAreaData(activeView, 'projects', [...rawProjects, { 
+            id: newId, title: '', description: '', enablers: [""], start: `${GANTT_START_YEAR}-01`, end: `${GANTT_START_YEAR}-04`, impact: 5, effort: 5, budgetMin: 0, budgetMax: 0 
+        }]);
+        setSelectedProjectId(newId);
     };
 
-    const removeBlock = (blockId) => {
-        if (!isEditor || !window.confirm("Vuoi davvero rimuovere questa sezione? I dati contenuti rimarranno nel database ma non saranno più visibili in quest'area.")) return;
-        updateAreaData(activeView, 'blocks', blocks.filter(b => b.id !== blockId));
+    const removeProject = (projectId) => {
+        if (!isEditor) return;
+        const newProjects = rawProjects.filter(p => p.id !== projectId);
+        updateAreaData(activeView, 'projects', newProjects);
+        if (selectedProjectId === projectId) setSelectedProjectId(newProjects.length > 0 ? newProjects[0].id : null);
     };
 
-    const addCustomBlock = (type) => {
-        const newBlock = {
-            id: generateUniqueId('block'),
-            type,
-            title: type === 'text' ? 'Nuova Sezione Testo' : 'Nuova Sezione',
-            contentId: type === 'text' ? generateUniqueId('content') : null // Per differenziare contenuti di più blocchi testo
-        };
-        updateAreaData(activeView, 'blocks', [...blocks, newBlock]);
-        setBlockMenuOpen(false);
-    };
-
-    const updateBlockTitle = (blockId, newTitle) => {
-        const newBlocks = blocks.map(b => b.id === blockId ? { ...b, title: newTitle } : b);
-        updateAreaData(activeView, 'blocks', newBlocks);
-    };
-
-    // --- LOGICA SPECIFICA COMPONENTI STANDARD ---
     const handleEnablerKeyDown = (e, index, projectId, currentEnablers) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -103,241 +109,261 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             newEnablers.splice(index + 1, 0, "");
             updateProject(activeView, projectId, 'enablers', newEnablers);
             setTimeout(() => document.querySelectorAll(`.enabler-input-${projectId}`)[index + 1]?.focus(), 10);
+        } else if (e.key === 'Backspace' && currentEnablers[index] === "" && currentEnablers.length > 1) {
+            e.preventDefault();
+            const newEnablers = currentEnablers.filter((_, i) => i !== index);
+            updateProject(activeView, projectId, 'enablers', newEnablers);
+            setTimeout(() => document.querySelectorAll(`.enabler-input-${projectId}`)[index - 1]?.focus(), 10);
         }
     };
 
-    if (!area) return null;
+    const toggleKsm = (ksmId) => {
+        setExpandedKSMs(prev => ({ ...prev, [ksmId]: !prev[ksmId] }));
+    };
+
+    const addKSM = () => {
+        if (!isEditor) return;
+        const newId = generateUniqueId('ksm');
+        updateAreaData(activeView, 'ksms', [...(Array.isArray(data.ksms) ? data.ksms : []), { id: newId, name: '', valueAsIs: '', targetValue: '', description: '' }]);
+        setExpandedKSMs(prev => ({ ...prev, [newId]: true }));
+    };
+
+    const removeKSM = (ksmId) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'ksms', (Array.isArray(data.ksms) ? data.ksms : []).filter(k => k.id !== ksmId));
+    };
+
+    const handleAddRoutineTask = () => {
+        if (!newRoutineTask.trim() || !isEditor) return;
+        updateAreaData(activeView, 'routine', [...routineTasks, { id: generateUniqueId('task'), text: newRoutineTask.trim(), completed: false }]);
+        setNewRoutineTask("");
+    };
+
+    const toggleRoutineTask = (taskId) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'routine', routineTasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t));
+    };
+
+    const removeRoutineTask = (taskId) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'routine', routineTasks.filter(t => t.id !== taskId));
+    };
+
+    const updateRoutineTaskText = (taskId, newText) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'routine', routineTasks.map(t => t.id === taskId ? { ...t, text: newText } : t));
+    };
+
     const selectedProject = areaProjects.find(p => p.id === selectedProjectId);
 
-    // --- RENDERER DEI BLOCCHI ---
-    const renderBlock = (block, index) => {
-        const isStandard = ['objectives', 'phasing', 'gantt', 'ksms', 'routine'].includes(block.type);
-        
-        // Wrapper comune per i controlli di movimento/cancellazione
-        const BlockWrapper = ({ children, icon: Icon, title, isCustomText = false }) => (
-            <div className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
-                <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-grow">
-                        <Icon size={18} className="text-gray-400" />
-                        {isCustomText || !isStandard ? (
-                            <input 
-                                type="text" value={block.title} 
-                                onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
-                                disabled={!isEditor}
-                                className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full"
-                            />
-                        ) : (
-                            <span className="font-bold text-gray-900 text-lg">{title}</span>
-                        )}
-                    </div>
-                    {isEditor && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
-                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={16}/></button>
-                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={16}/></button>
-                            <div className="w-px h-4 bg-gray-200 mx-1"></div>
-                            <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
-                        </div>
-                    )}
-                </div>
-                <div className={block.type === 'gantt' ? '' : 'p-6'}>{children}</div>
-            </div>
-        );
-
-        switch (block.type) {
-            case 'objectives':
-                return (
-                    <BlockWrapper key={block.id} icon={Target} title="Obiettivi Macro">
-                        <AdvancedEditor value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} disabled={!isEditor} />
-                    </BlockWrapper>
-                );
-            case 'phasing':
-                return (
-                    <BlockWrapper key={block.id} icon={Calendar} title="Descrizione Qualitativa del Phasing">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {[1, 2, 3].map(y => (
-                                <div key={y} className="bg-gray-50 p-3 rounded-xl border border-gray-100 h-full">
-                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Anno {y}</div>
-                                    <AdvancedEditor value={data[`evolution_y${y}`] || ''} onChange={(v) => updateAreaData(activeView, `evolution_y${y}`, v)} disabled={!isEditor} />
-                                </div>
-                            ))}
-                        </div>
-                    </BlockWrapper>
-                );
-            case 'gantt':
-                return (
-                    <BlockWrapper key={block.id} icon={Calendar} title="Pianificazione Iniziative">
-                        <div className="p-4 bg-gray-50 border-b border-gray-200">
-                            <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
-                        </div>
-                        <div className="p-6">
-                            {selectedProject ? (
-                                <div className="space-y-6">
-                                    <input type="text" className="w-full text-2xl font-bold border-0 border-b border-gray-100 focus:ring-0 p-0 pb-2" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-4">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Descrizione</label>
-                                            <AdvancedEditor value={selectedProject.description || ''} onChange={(v) => updateProject(activeView, selectedProject.id, 'description', v)} disabled={!isEditor} />
-                                        </div>
-                                        <div className="space-y-4">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase">Abilitatori</label>
-                                            <div className="space-y-2">
-                                                {(selectedProject.enablers || [""]).map((en, i) => (
-                                                    <div key={i} className="flex items-center gap-2">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
-                                                        <input type="text" value={en} className="flex-grow text-sm border-0 focus:ring-0 p-0" onChange={(e) => {
-                                                            const next = [...selectedProject.enablers]; next[i] = e.target.value;
-                                                            updateProject(activeView, selectedProject.id, 'enablers', next);
-                                                        }} onKeyDown={(e) => handleEnablerKeyDown(e, i, selectedProject.id, selectedProject.enablers)} disabled={!isEditor} />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : <p className="text-center text-gray-400 italic py-10">Seleziona un'iniziativa dal Gantt</p>}
-                        </div>
-                    </BlockWrapper>
-                );
-            case 'ksms':
-                return (
-                    <BlockWrapper key={block.id} icon={Target} title="Key Success Metrics (KSM)">
-                        <div className="space-y-4">
-                            {(data.ksms || []).map(ksm => (
-                                <div key={ksm.id} className="border border-gray-200 rounded-xl p-4">
-                                    <div className="flex justify-between mb-4">
-                                        <input type="text" value={ksm.name} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} className="font-bold border-0 p-0 focus:ring-0" disabled={!isEditor} placeholder="Nome Metrica" />
-                                        {isEditor && <button onClick={() => removeKSM(ksm.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16}/></button>}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div className="bg-gray-50 p-3 rounded-lg">
-                                            <span className="text-[10px] uppercase text-gray-400 font-bold block mb-1">Attuale</span>
-                                            <input type="text" value={ksm.valueAsIs} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} className="w-full bg-transparent border-0 p-0 font-medium" disabled={!isEditor} />
-                                        </div>
-                                        <div className="bg-blue-50 p-3 rounded-lg">
-                                            <span className="text-[10px] uppercase text-blue-400 font-bold block mb-1">Target</span>
-                                            <input type="text" value={ksm.targetValue} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} className="w-full bg-transparent border-0 p-0 font-bold text-blue-600" disabled={!isEditor} />
-                                        </div>
-                                    </div>
-                                    <AdvancedEditor value={ksm.description || ''} onChange={(v) => updateKSM(activeView, ksm.id, 'description', v)} disabled={!isEditor} />
-                                </div>
-                            ))}
-                            {isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM}>Aggiungi Metrica</Button>}
-                        </div>
-                    </BlockWrapper>
-                );
-            case 'routine':
-                return (
-                    <BlockWrapper key={block.id} icon={Clock} title="Attività a Regime">
-                        <p className="text-sm text-gray-500 mb-4 italic">Attività incrementali e trasformative rispetto al modello attuale</p>
-                        <div className="space-y-2">
-                            {routineTasks.map(t => (
-                                <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl group/task">
-                                    <button onClick={() => toggleRoutineTask(t.id)} className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${t.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white border-gray-200'}`} disabled={!isEditor}>
-                                        {t.completed && <Check size={12} strokeWidth={3}/>}
-                                    </button>
-                                    <input type="text" value={t.text} onChange={(e) => updateRoutineTaskText(t.id, e.target.value)} className={`flex-grow bg-transparent border-0 p-0 text-sm ${t.completed ? 'line-through text-gray-400' : 'text-gray-700 font-medium'}`} disabled={!isEditor} />
-                                    {isEditor && <button onClick={() => removeRoutineTask(t.id)} className="opacity-0 group-hover/task:opacity-100 text-gray-300 hover:text-red-500"><X size={16}/></button>}
-                                </div>
-                            ))}
-                            {isEditor && (
-                                <div className="flex gap-2 mt-4">
-                                    <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Nuova attività..." className="flex-grow text-sm border border-gray-200 rounded-lg px-3 py-2" />
-                                    <Button variant="secondary" onClick={handleAddRoutineTask}>Aggiungi</Button>
-                                </div>
-                            )}
-                        </div>
-                    </BlockWrapper>
-                );
-            case 'text':
-                // Per i blocchi di testo custom, usiamo una chiave dinamica nel data dell'area
-                const contentKey = block.contentId || `custom_text_${block.id}`;
-                return (
-                    <BlockWrapper key={block.id} icon={AlignLeft} title={block.title} isCustomText>
-                        <AdvancedEditor value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato..." />
-                    </BlockWrapper>
-                );
-            default: return null;
-        }
-    };
-
     return (
-        <div className="space-y-6 animate-fadeIn relative pb-32">
+        <div className="space-y-6 animate-fadeIn relative">
             
-            {/* modale note */}
             {isNotesOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-                        <div className="bg-gray-100 px-6 py-4 flex justify-between items-center border-b">
-                            <h3 className="font-bold flex items-center gap-2"><StickyNote size={18} className="text-yellow-600" /> Note Area</h3>
-                            <button onClick={() => setIsNotesOpen(false)}><X size={20} /></button>
+                        <div className="bg-gray-100 px-6 py-4 flex justify-between items-center border-b border-gray-200">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2"><StickyNote size={18} className="text-yellow-600" /> Note: {area.label}</h3>
+                            <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-800"><X size={20} /></button>
                         </div>
                         <div className="p-6">
-                            <AdvancedEditor value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} />
+                            <AdvancedEditor key={`notes-${activeView}`} value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} />
                         </div>
+                        <div className="px-6 py-4 bg-gray-50 flex justify-end"><Button onClick={() => setIsNotesOpen(false)} variant="secondary">Chiudi</Button></div>
                     </div>
                 </div>
             )}
 
-            {/* HEADER FISSO AREA */}
-            <div className="bg-white rounded-[32px] shadow-sm border border-gray-200 p-8 relative z-40">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="p-4 rounded-2xl text-white shadow-lg" style={{ backgroundColor: area.hex }}><area.icon size={32} /></div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative z-40">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4 flex-grow">
+                        <div className="p-3 rounded-xl text-white" style={{ backgroundColor: area.hex }}><area.icon size={28} /></div>
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{area.label}</h2>
-                            <button onClick={() => setIsNotesOpen(true)} className="text-xs mt-1 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100 transition-colors">
-                                <StickyNote size={12} /> Note di Lavoro
-                            </button>
+                            <h2 className="text-2xl font-bold text-gray-900">{area.label}</h2>
+                            <div className="flex items-center gap-3">
+                                <p className="text-gray-500 text-sm">Pianificazione operativa</p>
+                                <button onClick={() => setIsNotesOpen(true)} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200 hover:bg-yellow-200 transition-colors"><StickyNote size={12} /> Note</button>
+                            </div>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                        <div className="bg-slate-900 rounded-2xl p-4 min-w-[220px] shadow-xl border border-white/10">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10px] uppercase font-bold tracking-[2px] text-yellow-500/80">Ruolo Strategico</span>
-                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-white/40 hover:text-white"><Info size={14}/></button>
+                    <div className="flex items-stretch gap-4 w-full md:w-auto relative">
+                        <div className="rounded-xl p-3 flex flex-col justify-center shadow-lg bg-slate-900 min-w-[190px] relative transition-colors">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-yellow-500">Ruolo Strategico</span>
+                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-gray-400 hover:text-white"><Info size={14} /></button>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl">{currentRole.icon}</span>
-                                <select value={currentRole.value} onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))} disabled={!isEditor} className="bg-transparent border-0 p-0 text-white font-bold text-lg focus:ring-0 cursor-pointer w-full">
-                                    {STRATEGIC_ROLES.map(r => <option key={r.id} value={r.value} className="text-slate-900">{r.label}</option>)}
-                                </select>
-                            </div>
+                            <select value={currentRole.value} onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))} disabled={!isEditor} className="w-full appearance-none bg-transparent border-0 border-b-2 border-yellow-500 p-0 py-1 text-white font-semibold text-[15px] cursor-pointer focus:ring-0">
+                                {STRATEGIC_ROLES.map(role => <option key={role.id} value={role.value}>{role.icon} {role.label}</option>)}
+                            </select>
+
+                            {isLegendOpen && (
+                                <div>
+                                    <div className="fixed inset-0 z-[60]" onClick={() => setIsLegendOpen(false)}></div>
+                                    <div className="absolute top-[calc(100%+12px)] right-0 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-[70] overflow-hidden cursor-default animate-fadeIn">
+                                        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                            <h3 className="font-bold text-gray-900 text-sm">Legenda Ruolo Strategico</h3>
+                                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={16} /></button>
+                                        </div>
+                                        <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar text-left">
+                                            {STRATEGIC_ROLES.map(role => (
+                                                <div key={role.id}>
+                                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-1.5 text-sm"><span className="text-lg">{role.icon}</span> {role.title}</h4>
+                                                    <p className="text-xs text-gray-600 leading-relaxed font-normal whitespace-normal">{role.desc}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* --- RENDER DEI BLOCCHI DINAMICI --- */}
-            <div className="space-y-6">
-                {blocks.map((block, idx) => renderBlock(block, idx))}
-            </div>
-
-            {/* --- TOOLBAR AGGIUNTA BLOCCHI --- */}
-            {isEditor && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60]">
-                    <div className="bg-white/80 backdrop-blur-md border border-gray-200 rounded-full p-2 shadow-2xl flex items-center gap-2">
-                        <Button onClick={() => setBlockMenuOpen(!blockMenuOpen)} variant="primary" className="rounded-full px-6 py-3 shadow-lg flex items-center gap-2">
-                            <PlusCircle size={20}/> Aggiungi Modulo
-                        </Button>
-                        
-                        {blockMenuOpen && (
-                            <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-72 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeInFast p-2">
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4">Moduli Standard</div>
-                                <button onClick={() => addCustomBlock('objectives')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3 rounded-2xl transition-colors"><Target size={16} className="text-red-500"/> Obiettivi Macro</button>
-                                <button onClick={() => addCustomBlock('phasing')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3 rounded-2xl transition-colors"><Calendar size={16} className="text-blue-500"/> Phasing Qualitativo</button>
-                                <button onClick={() => addCustomBlock('gantt')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3 rounded-2xl transition-colors"><Calendar size={16} className="text-purple-500"/> Gantt Iniziative</button>
-                                <button onClick={() => addCustomBlock('ksms')} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 flex items-center gap-3 rounded-2xl transition-colors"><Target size={16} className="text-green-500"/> Metriche KSM</button>
-                                
-                                <div className="h-px bg-gray-100 my-2 mx-2"></div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4">Moduli Custom</div>
-                                <button onClick={() => addCustomBlock('text')} className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 rounded-2xl transition-colors font-medium"><AlignLeft size={16} className="text-blue-500"/> Box di Testo Formattato</button>
-                                <button disabled className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 text-gray-400 cursor-not-allowed opacity-50"><Layout size={16}/> Tabella Dinamica (Soon)</button>
-                            </div>
-                        )}
-                    </div>
+            <Card title="Obiettivi Macro" icon={Target}>
+                <div id="target-objective" className="rounded-lg">
+                    <AdvancedEditor key={`obj-${activeView}`} value={data.objectives || ''} onChange={(val) => updateAreaData(activeView, 'objectives', val)} placeholder={`Quali sono gli obiettivi dell'area per garantire l'aderenza al modello strategico in oggetto? (elenco numerato)`} disabled={!isEditor} />
                 </div>
-            )}
+            </Card>
+
+            <Card title="Descrizione Qualitativa del Phasing" icon={Calendar}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+                    {[1, 2, 3].map(year => (
+                        <div key={year} id={`target-phasing-${year}`} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col h-full">
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Anno {year}</div>
+                            <div className="relative flex-grow flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                <AdvancedEditor key={`evo-${activeView}-${year}`} value={data[`evolution_y${year}`] || ''} onChange={(val) => updateAreaData(activeView, `evolution_y${year}`, val)} placeholder={`Focus Anno ${year}...`} disabled={!isEditor} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
+            <Card title="Pianificazione Iniziative" icon={Calendar} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addProject} className="text-red-700">Aggiungi Progetto</Button>} noPadding>
+                <div className="p-4 bg-gray-50 border-b border-gray-200">
+                    <GanttChart projects={areaProjects} areas={EXPERTISE_AREAS} activeAreaId={area.id} onUpdateProject={updateProjectBatch} isEditor={isEditor} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
+                </div>
+                <div className="p-6 bg-white min-h-[300px]" id="target-project-details">
+                    {selectedProject ? (
+                        <div className="animate-fadeIn rounded-xl p-2">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 text-sm text-gray-400 font-medium"><span>Progetti</span><ChevronRight size={14} /><span style={{ color: area.hex }}>{selectedProject.title || 'Senza nome'}</span></div>
+                                {isEditor && <button onClick={() => removeProject(selectedProject.id)} className="text-xs text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>}
+                            </div>
+                            <div className="space-y-8">
+                                <input type="text" placeholder="Nome del progetto..." className="w-full text-2xl font-bold text-gray-800 border-0 border-b border-gray-100 focus:ring-0 px-0 pb-2" style={{ color: area.hex }} value={selectedProject.title} onChange={(e) => updateProject(activeView, selectedProject.id, 'title', e.target.value)} disabled={!isEditor} />
+                                <div className="flex flex-wrap items-end gap-6 pb-8 border-b border-gray-50">
+                                    <div className="space-y-2 flex-grow min-w-[320px]">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tempistiche</label>
+                                        <div className="flex items-center justify-between gap-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100 h-11 px-4">
+                                            <div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 flex-shrink-0" /><input type="month" value={selectedProject.start} onChange={(e) => updateProject(activeView, selectedProject.id, 'start', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32" /></div>
+                                            <span className="text-gray-300">→</span>
+                                            <input type="month" value={selectedProject.end} onChange={(e) => updateProject(activeView, selectedProject.id, 'end', e.target.value)} disabled={!isEditor} className="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 w-32 text-right" />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="space-y-2 w-20 text-center">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Priorità</label>
+                                            <input type="number" min="1" max="10" value={selectedProject.impact} onChange={(e) => updateProject(activeView, selectedProject.id, 'impact', parseInt(e.target.value))} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-lg font-bold text-center h-11" style={{ color: area.hex }} />
+                                        </div>
+                                        <div className="space-y-2 w-20 text-center">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Effort</label>
+                                            <input type="number" min="1" max="10" value={selectedProject.effort} onChange={(e) => updateProject(activeView, selectedProject.id, 'effort', parseInt(e.target.value))} disabled={!isEditor} className="w-full bg-gray-50 border-gray-100 rounded-lg text-lg font-bold text-center h-11 text-gray-600" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrizione Iniziativa</label>
+                                    <AdvancedEditor key={`desc-${selectedProject.id}`} value={selectedProject.description || ''} onChange={(val) => updateProject(activeView, selectedProject.id, 'description', val)} disabled={!isEditor} />
+                                </div>
+                                <div className="space-y-4 pt-6">
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abilitatori Chiave (Key Enablers)</label>
+                                    <div className="space-y-3">
+                                        {(selectedProject.enablers || [""]).map((enabler, index) => (
+                                            <div key={index} className="flex items-center gap-3 group">
+                                                <div className="w-5 h-5 rounded-full border-2 border-gray-200 flex-shrink-0" />
+                                                <input type="text" value={enabler} placeholder={index === 0 ? "Aggiungi abilitatore..." : ""} className={`enabler-input-${selectedProject.id} flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm text-gray-700 font-medium`} onChange={(e) => { const newEnablers = [...(selectedProject.enablers || [""])]; newEnablers[index] = e.target.value; updateProject(activeView, selectedProject.id, 'enablers', newEnablers); }} onKeyDown={(e) => handleEnablerKeyDown(e, index, selectedProject.id, selectedProject.enablers || [""])} disabled={!isEditor} />
+                                                {isEditor && <button onClick={() => { const newEnablers = selectedProject.enablers.filter((_, i) => i !== index); updateProject(activeView, selectedProject.id, 'enablers', newEnablers.length ? newEnablers : [""]); }} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500"><X size={16} /></button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12"><Calendar size={48} className="opacity-20" /><p className="italic text-sm">Seleziona un progetto dal Gantt per visualizzare i dettagli</p></div>
+                    )}
+                </div>
+            </Card>
+
+            <Card title="Key Success Metrics (KSM)" icon={Target} action={isEditor && <Button variant="ghost" icon={Plus} onClick={addKSM} className="text-red-700">Aggiungi Metrica</Button>} noPadding>
+                <div className="p-6 space-y-4 bg-slate-50/50">
+                    {(!Array.isArray(data.ksms) || data.ksms.length === 0) ? (
+                        <div className="text-gray-400 italic text-sm text-center py-4">Nessuna metrica definita.</div>
+                    ) : (
+                        data.ksms.map((ksm) => {
+                            const isExpanded = expandedKSMs[ksm.id];
+                            return (
+                                <div key={ksm.id} id={`target-ksm-${ksm.id}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative group transition-all hover:border-gray-300">
+                                    <div className="flex items-center justify-between p-5 bg-white relative z-10">
+                                        <div className="flex-grow pr-6">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Denominazione Metrica</label>
+                                            <input type="text" value={ksm.name || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'name', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-xl font-bold text-gray-800 p-0 focus:ring-0 placeholder-gray-300" placeholder="Nome Metrica" />
+                                        </div>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {isEditor && <button onClick={() => removeKSM(ksm.id)} className="text-gray-300 hover:text-red-500 transition-colors p-2"><Trash2 size={18} /></button>}
+                                            <button onClick={() => toggleKsm(ksm.id)} className="bg-slate-50 hover:bg-slate-100 border border-gray-200 text-gray-500 p-2 rounded-lg transition-colors flex items-center justify-center">{isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}</button>
+                                        </div>
+                                    </div>
+                                    {isExpanded && (
+                                        <div className="p-5 pt-0 bg-slate-50/50 border-t border-gray-100 animate-fadeIn">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 rounded-xl border border-gray-100 shadow-sm mt-4 mb-6">
+                                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valore As Is (Attuale)</label><input type="text" value={ksm.valueAsIs || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'valueAsIs', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base font-medium p-0 focus:ring-0 placeholder-gray-300" placeholder="Es. €383.741" /></div>
+                                                <div className="md:border-l border-gray-100 md:pl-6"><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Target di Massima</label><input type="text" value={ksm.targetValue || ''} onChange={(e) => updateKSM(activeView, ksm.id, 'targetValue', e.target.value)} disabled={!isEditor} className="w-full border-0 bg-transparent text-base text-blue-600 font-bold p-0 focus:ring-0 placeholder-blue-200" placeholder="Es. €1.100.000" /></div>
+                                            </div>
+                                            <div><label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Descrizione</label><AdvancedEditor key={`ksm-desc-${ksm.id}`} value={ksm.description || ''} onChange={(val) => updateKSM(activeView, ksm.id, 'description', val)} disabled={!isEditor} /></div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </Card>
+
+            <Card title="Attività a Regime" icon={Clock}>
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-500 font-medium">Attività incrementali e trasformative rispetto al modello attuale</p>
+                    
+                    {isEditor && (
+                        <div className="flex items-center gap-3 mt-2">
+                            <input type="text" value={newRoutineTask} onChange={(e) => setNewRoutineTask(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRoutineTask()} placeholder="Descrivi le attività a regime..." className="flex-grow border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100" />
+                            <Button variant="secondary" onClick={handleAddRoutineTask}>+ Aggiungi</Button>
+                        </div>
+                    )}
+                    
+                    {routineTasks.length === 0 ? (
+                        <div className="text-gray-400 text-sm italic mt-4">Nessuna attività day-by-day definita.</div>
+                    ) : (
+                        <div className="space-y-2 mt-4">
+                            {routineTasks.map((task) => (
+                                <div key={task.id} id={`target-routine-${task.id}`} className="group flex items-start justify-between p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                                    <div className="flex items-start gap-3 flex-grow">
+                                        <button onClick={() => toggleRoutineTask(task.id)} disabled={!isEditor} className={`w-5 h-5 min-w-[20px] min-h-[20px] mt-0.5 rounded-full border-2 flex items-center justify-center flex-none cursor-pointer transition-colors ${task.completed ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white'}`}>{task.completed && <Check size={12} strokeWidth={3} />}</button>
+                                        {isEditor ? (
+                                            <textarea value={task.text} onChange={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; updateRoutineTaskText(task.id, e.target.value); }} ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }} rows={1} className={`flex-grow bg-transparent border-0 focus:ring-0 p-0 text-sm outline-none transition-colors resize-none overflow-hidden leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`} />
+                                        ) : (
+                                            <span className={`text-sm select-none leading-tight pt-0.5 ${task.completed ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>{task.text}</span>
+                                        )}
+                                    </div>
+                                    {isEditor && <button onClick={() => removeRoutineTask(task.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 p-1 flex-shrink-0 mt-0.5"><X size={16} /></button>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </Card>
         </div>
     );
 };
