@@ -58,6 +58,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
     const currentRole = getStrategicRole(data.importance);
 
+    // Autoseleziona il primo progetto disponibile nel primo blocco Gantt utile
     useEffect(() => {
         if (!selectedProjectId) {
             for (let b of blocks) {
@@ -73,6 +74,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeView, blocks]);
 
+    // --- GESTIONE CLIC ESTERNO PER MENU BLOCCHI ---
     useEffect(() => {
         function handleClickOutside(event) {
             if (blockMenuOpen && 
@@ -85,6 +87,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [blockMenuOpen]);
 
+    // --- FOCUS GESTION ---
     useEffect(() => {
         if (searchFocusItem) {
             if (searchFocusItem.type === 'project') setSelectedProjectId(searchFocusItem.id);
@@ -114,6 +117,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         }
     }, [searchFocusItem, activeView, onFocusHandled]);
 
+    // --- HANDLERS BLOCCHI ---
     const moveBlock = (index, direction) => {
         if (!isEditor) return;
         const newBlocks = [...blocks];
@@ -139,6 +143,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             title: ''
         };
 
+        // Assegna il titolo di default (editabile in seguito)
         switch (type) {
             case 'objectives': newBlock.title = 'Nuovi Obiettivi Macro'; break;
             case 'phasing': newBlock.title = 'Nuovo Phasing Qualitativo'; break;
@@ -153,6 +158,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'blocks', [...blocks, newBlock]);
         setBlockMenuOpen(false);
 
+        // Scroll infallibile sul nuovo blocco
         setTimeout(() => {
             const newElement = document.getElementById(`block-wrapper-${newBlock.id}`);
             if (newElement) {
@@ -185,41 +191,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
     if (!area) return null;
 
-    const BlockWrapper = ({ block, index, icon: Icon, titleText, actionButton, children }) => (
-        <div id={`block-wrapper-${block.id}`} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
-            <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3.5 flex-grow pr-4">
-                    <Icon size={18} className="text-gray-400" />
-                    <input 
-                        type="text" value={titleText} 
-                        onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
-                        disabled={!isEditor}
-                        className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit hover:bg-gray-100/50 transition-colors rounded px-2 -ml-2"
-                        placeholder="Dai un titolo a questa sezione..." 
-                    />
-                </div>
-                
-                <div className="flex items-center gap-4">
-                    {actionButton && isEditor && (
-                        <div>{actionButton}</div>
-                    )}
-                    
-                    {isEditor && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
-                            <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
-                            <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
-                            <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
-                            <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className={block.type === 'gantt' ? '' : 'p-6'}>
-                {children}
-            </div>
-        </div>
-    );
-
+    // --- RENDERER PIATTO DEI BLOCCHI ---
     const renderBlock = (block, index) => {
         const isLegacy = block.id.startsWith('std_');
         let blockContent = null;
@@ -333,15 +305,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                     <input type="text" value={en} className={`enabler-input-${blockSelectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700 w-full`} onChange={(e) => {
                                                         const next = [...(blockSelectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                    }} onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            const next = [...(blockSelectedProject.enablers || [""])];
-                                                            next.splice(i + 1, 0, "");
-                                                            handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                            setTimeout(() => document.querySelectorAll(`.enabler-input-${blockSelectedProject.id}`)[i + 1]?.focus(), 10);
-                                                        }
-                                                    }} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
+                                                    }} onKeyDown={(e) => handleEnablerKeyDown(e, i, blockSelectedProject.id, blockSelectedProject.enablers || [""], handleUpdateProject)} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
                                                     {isEditor && <button onClick={() => {
                                                         const next = blockSelectedProject.enablers.filter((_, idx) => idx !== i);
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next.length ? next : [""]);
@@ -377,7 +341,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
 
             blockContent = (
-                <div className="space-y-4">
+                <div className="space-y-4 p-6 bg-slate-50/30">
                     {blockKsms.map(ksm => {
                         const isExpanded = expandedKSMs[ksm.id];
                         return (
@@ -429,7 +393,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             };
 
             blockContent = (
-                <div className="space-y-2">
+                <div className="space-y-2 p-6">
                     <p className="text-sm text-gray-500 font-medium italic mb-5 ml-1">Attività incrementali e trasformative rispetto al modello attuale</p>
                     {isEditor && (
                         <div className="flex items-center gap-2 mb-4 bg-white p-1 rounded-xl border border-gray-100 transition-colors focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-200 shadow-sm">
@@ -461,19 +425,18 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             Icon = AlignLeft;
             const contentKey = block.contentId || `custom_text_${block.id}`;
             blockContent = (
-                <div>
+                <div className="p-6">
                     <AdvancedEditor key={`custom-${contentKey}`} value={data[contentKey] || ''} onChange={(v) => updateAreaData(activeView, contentKey, v)} disabled={!isEditor} placeholder="Scrivi qui il contenuto personalizzato... (Testo Formattato)" />
                 </div>
             );
         } else if (block.type === 'table') {
             Icon = Layout;
             const contentKey = block.contentId || `custom_table_${block.id}`;
-            // Inizializzazione sicura se i dati non esistono ancora
             const tableData = data[contentKey] || {
-                headers: ['Colonna 1', 'Colonna 2'],
+                headers: ['Colonna 1', 'Colonna 2', 'Colonna 3'],
                 rows: [
-                    { id: generateUniqueId('r1'), cells: ['', ''] },
-                    { id: generateUniqueId('r2'), cells: ['', ''] }
+                    { id: generateUniqueId('r1'), cells: ['', '', ''] },
+                    { id: generateUniqueId('r2'), cells: ['', '', ''] }
                 ]
             };
 
@@ -493,13 +456,14 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             };
 
             blockContent = (
-                <div>
-                    <div className="w-full overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm custom-scrollbar">
-                        <table className="w-full text-left border-collapse min-w-max">
+                <div className="space-y-4 p-6">
+                    <div className="w-full overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm custom-scrollbar pb-2">
+                        {/* Tabella con layout fisso e scroll orizzontale automatico se servono più colonne */}
+                        <table className="w-full text-left border-collapse" style={{ minWidth: 'max-content' }}>
                             <thead>
                                 <tr>
                                     {tableData.headers.map((h, i) => (
-                                        <th key={i} className="bg-slate-50 border-b border-r border-gray-200 p-0 relative group/th last:border-r-0 min-w-[200px] w-[200px] align-top">
+                                        <th key={i} className="bg-slate-50 border-b border-r border-gray-200 p-0 relative group/th last:border-r-0 align-top" style={{ minWidth: '280px', width: '280px', maxWidth: '280px' }}>
                                             <div className="flex w-full">
                                                 <input
                                                     type="text"
@@ -510,16 +474,16 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                         handleTableUpdate({ ...tableData, headers: newH });
                                                     }}
                                                     disabled={!isEditor}
-                                                    className="w-full bg-transparent border-0 font-bold text-[11px] uppercase tracking-widest text-gray-500 p-3.5 focus:ring-0 outline-none"
-                                                    placeholder={`Colonna ${i+1}`}
+                                                    className="w-full bg-transparent border-0 font-bold text-[11px] uppercase tracking-widest text-gray-700 p-4 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                                    placeholder={`Nome Colonna ${i+1}`}
                                                 />
                                                 {isEditor && tableData.headers.length > 1 && (
                                                     <button onClick={() => {
-                                                        if(!window.confirm("Eliminare questa colonna?")) return;
+                                                        if(!window.confirm("Vuoi davvero eliminare questa colonna? I dati andranno persi.")) return;
                                                         const newH = tableData.headers.filter((_, idx) => idx !== i);
                                                         const newR = tableData.rows.map(r => ({ ...r, cells: r.cells.filter((_, idx) => idx !== i) }));
                                                         handleTableUpdate({ headers: newH, rows: newR });
-                                                    }} className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/th:opacity-100 text-gray-400 hover:text-red-500 transition-opacity bg-slate-50 rounded px-1">
+                                                    }} className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/th:opacity-100 text-gray-400 hover:text-red-500 transition-opacity bg-white border border-gray-200 shadow-sm rounded p-1">
                                                         <X size={14} />
                                                     </button>
                                                 )}
@@ -532,7 +496,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 {tableData.rows.map((row, rowIndex) => (
                                     <tr key={row.id} className="group/tr border-b border-gray-100 last:border-0 hover:bg-slate-50/50 transition-colors">
                                         {row.cells.map((cell, colIndex) => (
-                                            <td key={`${row.id}-${colIndex}`} className="border-r border-gray-100 last:border-r-0 p-0 relative align-top">
+                                            <td key={`${row.id}-${colIndex}`} className="border-r border-gray-100 last:border-r-0 p-0 relative align-top" style={{ minWidth: '280px', width: '280px', maxWidth: '280px' }}>
                                                 <textarea
                                                     value={cell}
                                                     onChange={(e) => {
@@ -542,17 +506,17 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                     }}
                                                     disabled={!isEditor}
                                                     rows={1}
-                                                    className="w-full bg-transparent border-0 text-sm text-gray-700 p-3.5 focus:ring-2 focus:ring-blue-100 outline-none resize-none overflow-hidden Outfit"
-                                                    style={{ minHeight: '52px' }}
+                                                    className="w-full bg-transparent border-0 text-sm text-gray-700 p-4 focus:ring-2 focus:ring-blue-100 outline-none resize-none overflow-hidden Outfit transition-all"
+                                                    style={{ minHeight: '56px' }}
                                                     ref={el => { if(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-                                                    placeholder="..."
+                                                    placeholder="Inserisci testo..."
                                                 />
-                                                {/* Pulsante rimuovi riga posizionato sempre nell'ultima cella */}
+                                                {/* Pulsante Rimuovi Riga visibile sull'ultima cella della riga in hover */}
                                                 {isEditor && tableData.rows.length > 1 && colIndex === tableData.headers.length - 1 && (
                                                     <button onClick={() => {
                                                         const newRows = tableData.rows.filter((_, idx) => idx !== rowIndex);
                                                         handleTableUpdate({ ...tableData, rows: newRows });
-                                                    }} className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/tr:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1.5 bg-white rounded shadow border border-gray-100 z-10">
+                                                    }} className="absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover/tr:opacity-100 text-gray-300 hover:text-red-500 transition-opacity p-1.5 bg-white rounded shadow border border-gray-200 z-10">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 )}
@@ -564,12 +528,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         </table>
                     </div>
                     {isEditor && (
-                        <div className="flex items-center gap-3 mt-4">
-                            <Button variant="secondary" onClick={addRow} className="text-xs py-1.5 px-4 font-semibold flex items-center gap-1.5">
-                                <Plus size={14} /> Riga
+                        <div className="flex items-center gap-3">
+                            <Button variant="secondary" onClick={addRow} className="text-xs py-2 px-4 font-semibold flex items-center gap-1.5 shadow-sm">
+                                <Plus size={14} /> Aggiungi Riga
                             </Button>
-                            <Button variant="secondary" onClick={addCol} className="text-xs py-1.5 px-4 font-semibold flex items-center gap-1.5">
-                                <Plus size={14} /> Colonna
+                            <Button variant="secondary" onClick={addCol} className="text-xs py-2 px-4 font-semibold flex items-center gap-1.5 shadow-sm">
+                                <Plus size={14} /> Aggiungi Colonna
                             </Button>
                         </div>
                     )}
@@ -577,7 +541,40 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
             );
         }
 
-        return <BlockWrapper key={block.id} block={block} index={index} icon={Icon} titleText={titleText} actionButton={actionBtn}>{blockContent}</BlockWrapper>;
+        return (
+            <div id={`block-wrapper-${block.id}`} key={block.id} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
+                <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3.5 flex-grow pr-4">
+                        <Icon size={18} className="text-gray-400" />
+                        <input 
+                            type="text" value={titleText} 
+                            onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
+                            disabled={!isEditor}
+                            className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit hover:bg-gray-100/50 transition-colors rounded px-2 -ml-2"
+                            placeholder="Dai un titolo a questa sezione..." 
+                        />
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                        {actionBtn && isEditor && (
+                            <div>{actionBtn}</div>
+                        )}
+                        
+                        {isEditor && (
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
+                                <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
+                                <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
+                                <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
+                                <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className={block.type === 'gantt' ? '' : (block.type === 'ksms' ? '' : (block.type === 'table' ? '' : 'p-6'))}>
+                    {blockContent}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -672,7 +669,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                         
                         {blockMenuOpen && (
                             <div className="absolute bottom-full mb-4 right-0 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeInFast p-2 z-[61]" ref={blockMenuRef}>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard"}</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard dell'Area"}</div>
                                 <button onClick={() => addBlock('objectives')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
                                     <Target size={16} className="text-red-500"/> 
                                     <span className="text-gray-700 font-medium">Obiettivi Macro</span>
@@ -699,7 +696,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                 </button>
                                 
                                 <div className="h-px bg-gray-100 my-2 mx-2"></div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom</div>
+                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom Aggiuntivi</div>
                                 
                                 <button onClick={() => addBlock('text')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
                                     <AlignLeft size={16} className="text-gold-500"/> Box di Testo Formattato
