@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout, Network } from 'lucide-react';
+import { StickyNote, Target, Calendar, Plus, Trash2, Clock, X, Check, Info, ChevronDown, ChevronUp, AlignLeft, ArrowUp, ArrowDown, LayoutGrid, Layout, Network, RotateCcw } from 'lucide-react';
 import Button from './ui/Button';
 import GanttChart from './GanttChart';
 import AdvancedEditor from './AdvancedEditor';
@@ -24,7 +24,6 @@ export const getStrategicRole = (val) => {
 
 const generateUniqueId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// --- EXCEL PARSER ---
 const parseExcelString = (text) => {
     let rows = [];
     let currentRow = [];
@@ -68,7 +67,6 @@ const parseExcelString = (text) => {
 
 const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject, updateProjectBatch, updateKSM, isEditor = false, searchFocusItem = null, onFocusHandled }) => {
     
-    // --- STATI LOCALI ---
     const [isNotesOpen, setIsNotesOpen] = useState(false);
     const [isLegendOpen, setIsLegendOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -76,15 +74,12 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const [expandedKSMs, setExpandedKSMs] = useState({});
     const [blockMenuOpen, setBlockMenuOpen] = useState(false);
     
-    // REF per il menu dei blocchi
     const blockMenuRef = useRef(null);
     const blockButtonRef = useRef(null);
 
-    // --- DATI AREA ---
     const area = EXPERTISE_AREAS.find(a => a.id === activeView);
     const data = activeScenario?.data?.[activeView] || { ...EMPTY_AREA_DATA };
     
-    // --- INIZIALIZZAZIONE LAYOUT ---
     const blocks = useMemo(() => {
         if (data.blocks && data.blocks.length > 0) return data.blocks;
         return [
@@ -99,6 +94,45 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
     const rawProjects = Array.isArray(data.projects) ? data.projects : [];
     const areaProjects = rawProjects.map(p => ({ ...p, areaId: area?.id }));
     const currentRole = getStrategicRole(data.importance);
+
+    // === MOTORE DI RECUPERO DATI (Cestino Invisibile) ===
+    const orphanedBlocks = useMemo(() => {
+        const orphans = [];
+        const currentBlockIds = blocks.map(b => b.id);
+
+        // 1. Controlla i moduli standard eliminati
+        if (!currentBlockIds.includes('std_obj')) orphans.push({ id: 'std_obj', type: 'objectives', title: 'Obiettivi Macro (Originale)' });
+        if (!currentBlockIds.includes('std_phasing')) orphans.push({ id: 'std_phasing', type: 'phasing', title: 'Phasing (Originale)' });
+        if (!currentBlockIds.includes('std_gantt')) orphans.push({ id: 'std_gantt', type: 'gantt', title: 'Gantt Iniziative (Originale)' });
+        if (!currentBlockIds.includes('std_ksms')) orphans.push({ id: 'std_ksms', type: 'ksms', title: 'Metriche KSM (Originale)' });
+        if (!currentBlockIds.includes('std_routine')) orphans.push({ id: 'std_routine', type: 'routine', title: 'Attività a Regime (Originale)' });
+
+        // 2. Cerca nella memoria moduli custom "orfani"
+        Object.keys(data).forEach(key => {
+            if (key.endsWith('_projects') && key !== 'projects') {
+                const bId = key.replace('_projects', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'gantt', title: 'Gantt (Da Recuperare)' });
+            } else if (key.endsWith('_ksms') && key !== 'ksms') {
+                const bId = key.replace('_ksms', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'ksms', title: 'KSM (Da Recuperare)' });
+            } else if (key.endsWith('_routine') && key !== 'routine') {
+                const bId = key.replace('_routine', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'routine', title: 'Attività (Da Recuperare)' });
+            } else if (key.startsWith('custom_table_')) {
+                const bId = key.replace('custom_table_', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'table', title: 'Tabella (Da Recuperare)', contentId: key });
+            } else if (key.startsWith('custom_text_')) {
+                const bId = key.replace('custom_text_', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'text', title: 'Box Testo (Da Recuperare)', contentId: key });
+            } else if (key.startsWith('custom_org_')) {
+                const bId = key.replace('custom_org_', '');
+                if (!currentBlockIds.includes(bId)) orphans.push({ id: bId, type: 'org_chart', title: 'Organigramma (Da Recuperare)', contentId: key });
+            }
+        });
+
+        // Rimuove eventuali doppioni
+        return orphans.filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+    }, [data, blocks]);
 
     useEffect(() => {
         if (!selectedProjectId) {
@@ -184,6 +218,23 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
         updateAreaData(activeView, 'blocks', blocks.filter(b => b.id !== blockId));
     };
 
+    const restoreBlock = (block) => {
+        if (!isEditor) return;
+        updateAreaData(activeView, 'blocks', [...blocks, block]);
+        setBlockMenuOpen(false);
+
+        // Scroll al blocco appena recuperato
+        setTimeout(() => {
+            const newElement = document.getElementById(`block-wrapper-${block.id}`);
+            if (newElement) {
+                newElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                newElement.style.transition = 'all 0.5s ease-out';
+                newElement.style.boxShadow = '0 0 0 6px rgba(34, 197, 94, 0.4)'; // Flash verde per indicare recupero!
+                setTimeout(() => { newElement.style.boxShadow = 'none'; }, 1500);
+            }
+        }, 150);
+    };
+
     const addBlock = (type) => {
         if (!isEditor) return;
         
@@ -262,9 +313,8 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {[1, 2, 3].map(y => {
                         const phaseKey = isLegacy ? `evolution_y${y}` : `${block.id}_y${y}`;
-                        // NUOVA CHIAVE PER I TITOLI DEI BOX PHASING
                         const phaseTitleKey = isLegacy ? `evolution_y${y}_title` : `${block.id}_y${y}_title`;
-                        const displayTitle = data[phaseTitleKey] !== undefined ? data[phaseTitleKey] : `Anno ${y}`;
+                        const displayTitle = data[phaseTitleKey] !== undefined ? data[phaseTitleKey] : `ANNO ${y}`;
 
                         return (
                             <div key={y} id={isLegacy ? `target-phasing-${y}` : undefined} className="bg-slate-50 border border-gray-100 p-4 rounded-xl h-full flex flex-col transition-all hover:bg-white hover:shadow-sm">
@@ -274,7 +324,7 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                     onChange={(e) => updateAreaData(activeView, phaseTitleKey, e.target.value)}
                                     disabled={!isEditor}
                                     className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 bg-transparent border-0 p-0 focus:ring-0 outline-none w-full hover:text-gray-700 transition-colors"
-                                    placeholder={`Titolo Fase ${y}...`}
+                                    placeholder={`ANNO ${y}`}
                                 />
                                 <div className="bg-white border border-gray-200 rounded-lg flex-grow overflow-hidden">
                                     <AdvancedEditor key={`phasing-${y}-${block.id}-${activeView}`} value={data[phaseKey] || ''} onChange={(v) => updateAreaData(activeView, phaseKey, v)} disabled={!isEditor} placeholder={`Focus Fase ${y}...`} />
@@ -365,7 +415,15 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                                                     <input type="text" value={en} className={`enabler-input-${blockSelectedProject.id} flex-grow text-sm bg-transparent border-0 focus:ring-0 p-0 font-medium text-gray-700 w-full`} onChange={(e) => {
                                                         const next = [...(blockSelectedProject.enablers || [""])]; next[i] = e.target.value;
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next);
-                                                    }} onKeyDown={(e) => handleEnablerKeyDown(e, i, blockSelectedProject.id, blockSelectedProject.enablers || [""], handleUpdateProject)} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
+                                                    }} onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            const next = [...(blockSelectedProject.enablers || [""])];
+                                                            next.splice(i + 1, 0, "");
+                                                            handleUpdateProject(blockSelectedProject.id, 'enablers', next);
+                                                            setTimeout(() => document.querySelectorAll(`.enabler-input-${blockSelectedProject.id}`)[i + 1]?.focus(), 10);
+                                                        }
+                                                    }} disabled={!isEditor} placeholder="Aggiungi abilitatore..." />
                                                     {isEditor && <button onClick={() => {
                                                         const next = blockSelectedProject.enablers.filter((_, idx) => idx !== i);
                                                         handleUpdateProject(blockSelectedProject.id, 'enablers', next.length ? next : [""]);
@@ -515,7 +573,6 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
                 handleTableUpdate({ ...tableData, rows: [...tableData.rows, newRow] });
             };
 
-            // LOGICA INTEGRAZIONE PASTE INTELLIGENTE
             const handlePaste = (e, rowIndex, colIndex) => {
                 const pasteData = e.clipboardData.getData('text');
                 if (!pasteData) return;
@@ -697,252 +754,4 @@ const AreaEditor = ({ activeView, activeScenario, updateAreaData, updateProject,
 
             const onEditNode = (id, field, value) => handleOrgUpdate(updateOrgNode(orgData, id, field, value));
             const onAddChild = (parentId) => handleOrgUpdate(addOrgChild(orgData, parentId));
-            const onRemoveNode = (id) => handleOrgUpdate(removeOrgNode(orgData, id));
-
-            const renderOrgNode = (node, parentId = null, depth = 0) => {
-                let bgClass = "bg-white border border-gray-200";
-                let textClass = "text-gray-700";
-                let subTextClass = "text-gray-400";
-                
-                if (depth === 0) {
-                    bgClass = "bg-slate-800 border border-slate-900 shadow-md";
-                    textClass = "text-white";
-                    subTextClass = "text-slate-300";
-                } else if (depth === 1) {
-                    bgClass = "bg-slate-600 border border-slate-700 shadow-sm";
-                    textClass = "text-white";
-                    subTextClass = "text-slate-200";
-                } else if (depth === 2) {
-                    bgClass = "bg-slate-100 border border-slate-200";
-                    textClass = "text-gray-800";
-                    subTextClass = "text-gray-500";
-                }
-
-                return (
-                    <li key={node.id}>
-                        <div className="inline-flex flex-col items-center relative">
-                            <div className={`rounded-xl p-3 shadow-sm min-w-[180px] w-[180px] relative group ${bgClass}`}>
-                                <input type="text" value={node.name} onChange={(e) => onEditNode(node.id, 'name', e.target.value)} disabled={!isEditor} placeholder="Nome Cognome" className={`w-full bg-transparent border-0 p-0 text-center font-bold text-sm focus:ring-0 outline-none ${textClass} placeholder-opacity-50`} />
-                                <input type="text" value={node.role} onChange={(e) => onEditNode(node.id, 'role', e.target.value)} disabled={!isEditor} placeholder="Ruolo" className={`w-full bg-transparent border-0 p-0 text-center text-xs mt-1.5 focus:ring-0 outline-none ${subTextClass} placeholder-opacity-50`} />
-                                
-                                {isEditor && parentId && (
-                                    <button onClick={() => onRemoveNode(node.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 hover:bg-red-600 hover:scale-110"><X size={12}/></button>
-                                )}
-                                {isEditor && (
-                                    <button onClick={() => onAddChild(node.id)} className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 hover:bg-blue-600 hover:scale-110"><Plus size={14}/></button>
-                                )}
-                            </div>
-                        </div>
-                        {node.children && node.children.length > 0 && (
-                            <ul>
-                                {node.children.map(child => renderOrgNode(child, node.id, depth + 1))}
-                            </ul>
-                        )}
-                    </li>
-                );
-            };
-
-            blockContent = (
-                <div className="p-6">
-                    <style>{`
-                        .org-tree-${block.id} ul { display: flex; justify-content: center; padding-top: 24px; position: relative; gap: 0px; margin: 0; padding-left: 0; }
-                        .org-tree-${block.id} li { float: left; text-align: center; list-style-type: none; position: relative; padding: 24px 6px 0 6px; }
-                        .org-tree-${block.id} li::before, .org-tree-${block.id} li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 2px solid #cbd5e1; width: 50%; height: 24px; }
-                        .org-tree-${block.id} li::after { right: auto; left: 50%; border-left: 2px solid #cbd5e1; }
-                        .org-tree-${block.id} li:only-child::after, .org-tree-${block.id} li:only-child::before { display: none; }
-                        .org-tree-${block.id} li:only-child { padding-top: 0; }
-                        .org-tree-${block.id} li:first-child::before, .org-tree-${block.id} li:last-child::after { border: 0 none; }
-                        .org-tree-${block.id} li:last-child::before { border-right: 2px solid #cbd5e1; border-radius: 0 8px 0 0; }
-                        .org-tree-${block.id} li:first-child::after { border-radius: 8px 0 0 0; }
-                        .org-tree-${block.id} ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 2px solid #cbd5e1; width: 0; height: 24px; transform: translateX(-1px); }
-                        .org-tree-${block.id} > ul::before { display: none; }
-                    `}</style>
-                    <div className="w-full overflow-x-auto custom-scrollbar pb-12 pt-4">
-                        <div className={`org-tree-${block.id} min-w-max inline-block w-full flex justify-center`}>
-                            <ul>
-                                {renderOrgNode(orgData)}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div id={`block-wrapper-${block.id}`} key={block.id} className="bg-white rounded-[24px] shadow-sm border border-gray-200 overflow-hidden mb-6 group/block animate-fadeIn">
-                <div className="bg-slate-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3.5 flex-grow pr-4">
-                        <Icon size={18} className="text-gray-400" />
-                        <input 
-                            type="text" value={titleText} 
-                            onChange={(e) => updateBlockTitle(block.id, e.target.value)} 
-                            disabled={!isEditor}
-                            className="bg-transparent border-0 focus:ring-0 p-0 font-bold text-gray-900 text-lg w-full placeholder-gray-400 Outfit hover:bg-gray-100/50 transition-colors rounded px-2 -ml-2"
-                            placeholder="Dai un titolo a questa sezione..." 
-                        />
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                        {actionBtn && isEditor && (
-                            <div>{actionBtn}</div>
-                        )}
-                        
-                        {isEditor && (
-                            <div className="flex items-center gap-1.5 opacity-0 group-hover/block:opacity-100 transition-all ml-2">
-                                <button onClick={() => moveBlock(index, 'up')} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowUp size={16}/></button>
-                                <button onClick={() => moveBlock(index, 'down')} disabled={index === blocks.length - 1} className="p-1.5 text-gray-400 hover:text-gray-900 disabled:opacity-20"><ArrowDown size={16}/></button>
-                                <div className="w-px h-5 bg-gray-200 mx-1.5"></div>
-                                <button onClick={() => removeBlock(block.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className={block.type === 'gantt' ? '' : (block.type === 'ksms' ? '' : (block.type === 'table' ? '' : (block.type === 'org_chart' ? '' : 'p-6')))}>
-                    {blockContent}
-                </div>
-            </div>
-        );
-    };
-
-    return (
-        <div className="space-y-6 animate-fadeIn relative pb-32 Outfit">
-            
-            {/* Modal Note */}
-            {isNotesOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 transition-all">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gray-100/50 px-6 py-4 flex justify-between items-center border-b border-gray-100">
-                            <h3 className="font-bold text-gray-900 flex items-center gap-2"><StickyNote size={18} className="text-yellow-600" /> Note di Lavoro Area</h3>
-                            <button onClick={() => setIsNotesOpen(false)} className="text-gray-500 hover:text-gray-900"><X size={20} /></button>
-                        </div>
-                        <div className="p-6">
-                            <AdvancedEditor key={`notes-area-${activeView}`} value={data.comments || ''} onChange={(val) => updateAreaData(activeView, 'comments', val)} disabled={!isEditor} placeholder="Aggiungi note personali su questa area, non visibili nel PDF." />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* HEADER FISSO AREA */}
-            <div className="bg-white rounded-[32px] shadow-sm border border-gray-200 p-8 relative z-40 transition-shadow hover:shadow-lg">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                        <div className="p-4 rounded-2xl text-white shadow-lg" style={{ backgroundColor: area.hex }}><area.icon size={32} /></div>
-                        <div>
-                            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{area.label}</h2>
-                            <button onClick={() => setIsNotesOpen(true)} className="text-xs mt-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100 transition-colors font-semibold">
-                                <StickyNote size={12} /> Note di Lavoro
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                        <div className="bg-slate-900 rounded-2xl p-4 min-w-[220px] shadow-2xl border border-white/10 relative">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10px] uppercase font-bold tracking-[2.5px] text-yellow-500/80">Ruolo Strategico</span>
-                                <button onClick={() => setIsLegendOpen(!isLegendOpen)} className="text-white/40 hover:text-white"><Info size={14}/></button>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl">{currentRole.icon}</span>
-                                <select value={currentRole.value} onChange={(e) => updateAreaData(activeView, 'importance', parseInt(e.target.value))} disabled={!isEditor} className="bg-transparent border-0 p-0 text-white font-bold text-lg focus:ring-0 cursor-pointer w-full Outfit">
-                                    {STRATEGIC_ROLES.map(r => <option key={r.id} value={r.value} className="text-slate-900">{r.label}</option>)}
-                                </select>
-                            </div>
-                            
-                            {isLegendOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-[60]" onClick={() => setIsLegendOpen(false)}></div>
-                                    <div className="absolute top-[calc(100%+12px)] right-0 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-[70] overflow-hidden animate-fadeIn">
-                                        <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                            <h3 className="font-bold text-gray-900 text-sm">Legenda Ruolo Strategico</h3>
-                                            <button onClick={() => setIsLegendOpen(false)} className="text-gray-400 hover:text-gray-700"><X size={16} /></button>
-                                        </div>
-                                        <div className="p-5 space-y-5 max-h-[60vh] overflow-y-auto custom-scrollbar Outfit text-sm">
-                                            {STRATEGIC_ROLES.map(role => (
-                                                <div key={role.id}>
-                                                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-1.5 text-sm"><span className="text-lg">{role.icon}</span> {role.title}</h4>
-                                                    <p className="text-xs text-gray-600 leading-relaxed font-normal">{role.desc}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* --- RENDER DEI BLOCCHI DINAMICI --- */}
-            <div className="space-y-6">
-                {blocks.map((block, idx) => renderBlock(block, idx))}
-            </div>
-
-            {/* --- TOOLBAR AGGIUNTA BLOCCHI (Floating CTA GOLD) --- */}
-            {isEditor && (
-                <div className="fixed bottom-8 right-8 z-[100]" ref={blockButtonRef}>
-                    <div className="relative">
-                        <button 
-                            onClick={() => setBlockMenuOpen(!blockMenuOpen)} 
-                            className="bg-[#bf9000] text-white rounded-full h-14 border-[3px] border-white shadow-[0_8px_30px_rgba(191,144,0,0.4)] flex items-center transition-all duration-300 ease-in-out overflow-hidden group hover:w-[190px] w-14 justify-start px-[13px]"
-                            title="Aggiungi un nuovo modulo all'area"
-                        >
-                            <div className="flex-shrink-0 flex items-center justify-center">
-                                <LayoutGrid size={22}/>
-                            </div>
-                            <span className="font-bold text-sm whitespace-nowrap ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                                Aggiungi Modulo
-                            </span>
-                        </button>
-                        
-                        {blockMenuOpen && (
-                            <div className="absolute bottom-full mb-4 right-0 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeInFast p-2 z-[61]" ref={blockMenuRef}>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">{"Moduli Standard"}</div>
-                                <button onClick={() => addBlock('objectives')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
-                                    <Target size={16} className="text-red-500"/> 
-                                    <span className="text-gray-700 font-medium">Obiettivi Macro</span>
-                                </button>
-                                
-                                <button onClick={() => addBlock('phasing')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
-                                    <Calendar size={16} className="text-blue-500"/> 
-                                    <span className="text-gray-700 font-medium">Phasing Qualitativo</span>
-                                </button>
-                                
-                                <button onClick={() => addBlock('gantt')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
-                                    <Calendar size={16} className="text-purple-500"/> 
-                                    <span className="text-gray-700 font-medium">Gantt Iniziative</span>
-                                </button>
-                                
-                                <button onClick={() => addBlock('ksms')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
-                                    <Target size={16} className="text-green-500"/> 
-                                    <span className="text-gray-700 font-medium">Metriche KSM</span>
-                                </button>
-                                
-                                <button onClick={() => addBlock('routine')} className="w-full text-left px-4 py-3 text-sm flex items-center gap-3.5 rounded-2xl transition-colors Outfit hover:bg-slate-50">
-                                    <Clock size={16} className="text-yellow-600"/> 
-                                    <span className="text-gray-700 font-medium">Attività a Regime</span>
-                                </button>
-                                
-                                <div className="h-px bg-gray-100 my-2 mx-2"></div>
-                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest p-3 px-4 Outfit">Moduli Custom</div>
-                                
-                                <button onClick={() => addBlock('text')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
-                                    <AlignLeft size={16} className="text-gold-500"/> Box di Testo Formattato
-                                </button>
-                                
-                                <button onClick={() => addBlock('table')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
-                                    <Layout size={16} className="text-gold-500"/> Tabella Dinamica
-                                </button>
-
-                                <button onClick={() => addBlock('org_chart')} className="w-full text-left px-4 py-3 text-sm hover:bg-gold-50 hover:text-gold-700 flex items-center gap-3.5 rounded-2xl transition-colors font-medium Outfit text-gray-800">
-                                    <Network size={16} className="text-gold-500"/> Organigramma Team
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default AreaEditor;
+            const onRemoveNode = (id) =>
